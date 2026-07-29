@@ -6,6 +6,9 @@ import {
   validateInput,
   parseFormData,
   ValidationError,
+  checkRateLimit,
+  resetRateLimit,
+  RateLimitError,
 } from "@/lib/auth";
 import {
   SignInSchema,
@@ -19,6 +22,9 @@ export async function signIn(
   formData: FormData,
 ): Promise<AuthActionState> {
   try {
+    // Rate limiting
+    await checkRateLimit("LOGIN");
+
     const formDataObj = parseFormData(formData);
     const validated = validateInput(SignInSchema, formDataObj);
 
@@ -33,8 +39,14 @@ export async function signIn(
       return { error: "Email ou senha inválidos. Tente novamente." };
     }
 
+    // Login bem-sucedido, resetar rate limit
+    await resetRateLimit("LOGIN");
+
     redirect("/dashboard");
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return { error: error.message };
+    }
     if (error instanceof ValidationError) {
       return { error: error.message };
     }
@@ -48,6 +60,9 @@ export async function signUp(
   formData: FormData,
 ): Promise<AuthActionState> {
   try {
+    // Rate limiting
+    await checkRateLimit("SIGNUP");
+
     const formDataObj = parseFormData(formData);
     const validated = validateInput(SignUpSchema, formDataObj);
 
@@ -70,8 +85,14 @@ export async function signUp(
       };
     }
 
+    // Signup bem-sucedido, resetar rate limit
+    await resetRateLimit("SIGNUP");
+
     redirect("/dashboard");
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return { error: error.message };
+    }
     if (error instanceof ValidationError) {
       return { error: error.message };
     }
