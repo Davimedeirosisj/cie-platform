@@ -17,9 +17,7 @@ export const CreateCampanhaSchema = z.object({
     .min(1900, "Ano deve ser maior que 1900")
     .max(new Date().getFullYear() + 10, `Ano não pode ser maior que ${new Date().getFullYear() + 10}`),
   status: z
-    .enum(["planejamento", "ativa", "encerrada"], {
-      errorMap: () => ({ message: "Status de campanha inválido" }),
-    })
+    .enum(["planejamento", "ativa", "encerrada"])
     .default("planejamento"),
   is_campanha_meta: z
     .boolean()
@@ -32,9 +30,7 @@ export const EditCampanhaSchema = CreateCampanhaSchema.extend({
 
 export const UpdateCampanhaStatusSchema = z.object({
   id: z.string().uuid("ID inválido"),
-  status: z.enum(["planejamento", "ativa", "encerrada"], {
-    errorMap: () => ({ message: "Status de campanha inválido" }),
-  }),
+  status: z.enum(["planejamento", "ativa", "encerrada"]),
 });
 
 export type CreateCampanhaInput = z.infer<typeof CreateCampanhaSchema>;

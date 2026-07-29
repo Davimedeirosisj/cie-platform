@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { ZodSchema } from "zod";
+import { z, type ZodSchema } from "zod";
 
 export class AuthorizationError extends Error {
   constructor(message: string = "Não autorizado") {
@@ -86,12 +86,12 @@ export async function protectedAction<T>(
   }
 }
 
-export function validateInput<T>(
-  schema: ZodSchema,
+export function validateInput<T extends ZodSchema>(
+  schema: T,
   data: unknown
-): T {
+): z.infer<T> {
   try {
-    return schema.parse(data) as T;
+    return schema.parse(data);
   } catch (error: any) {
     const messages = error.errors?.map((e: any) => `${e.path.join(".")}: ${e.message}`).join("; ");
     throw new ValidationError(`Dados inválidos: ${messages || error.message}`);

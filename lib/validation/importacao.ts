@@ -5,17 +5,12 @@ export const ImportBatchSchema = z.object({
   estado_id: z.string().uuid("Estado inválido"),
   batch_id: z.string().uuid("Batch ID inválido"),
   rows: z
-    .array(
-      z.record(z.any()),
-      {
-        errorMap: () => ({ message: "Rows deve ser um array de objetos" }),
-      }
-    )
+    .array(z.record(z.string(), z.any()))
     .min(1, "Deve haver pelo menos 1 linha para importar")
     .max(10000, "Máximo 10000 linhas por batch"),
 });
 
-export const ImportRowSchema = z.record(z.string(), z.any()).strict();
+export const ImportRowSchema = z.record(z.string(), z.any());
 
 export const ImportProgressSchema = z.object({
   campanha_id: z.string().uuid(),

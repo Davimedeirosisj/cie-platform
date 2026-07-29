@@ -72,9 +72,7 @@ export const EditSecaoSchema = CreateSecaoSchema.extend({
 });
 
 export const CreateMetaSchema = z.object({
-  nivel: z.enum(["municipio", "bairro", "zona", "secao"], {
-    errorMap: () => ({ message: "Nível de meta inválido" }),
-  }),
+  nivel: z.enum(["municipio", "bairro", "zona", "secao"]),
   valor_meta: z
     .number()
     .int("Meta deve ser um inteiro")
