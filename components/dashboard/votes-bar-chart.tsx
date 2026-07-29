@@ -1,9 +1,10 @@
 "use client";
 
+import { memo, useMemo } from "react";
 import ReactECharts from "echarts-for-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export function VotesBarChart({
+function VotesBarChartComponent({
   title,
   categories,
   series,
@@ -14,18 +15,27 @@ export function VotesBarChart({
   series: { name: string; data: number[] }[];
   isLoading?: boolean;
 }) {
-  const option = {
-    tooltip: { trigger: "axis" },
-    legend: series.length > 1 ? { bottom: 0 } : undefined,
-    grid: { left: 8, right: 16, top: 24, bottom: series.length > 1 ? 32 : 8, containLabel: true },
-    xAxis: { type: "category", data: categories, axisLabel: { rotate: 20 } },
-    yAxis: { type: "value" },
-    series: series.map((s) => ({
-      name: s.name,
-      type: "bar",
-      data: s.data,
-    })),
-  };
+  const option = useMemo(
+    () => ({
+      tooltip: { trigger: "axis" },
+      legend: series.length > 1 ? { bottom: 0 } : undefined,
+      grid: {
+        left: 8,
+        right: 16,
+        top: 24,
+        bottom: series.length > 1 ? 32 : 8,
+        containLabel: true,
+      },
+      xAxis: { type: "category", data: categories, axisLabel: { rotate: 20 } },
+      yAxis: { type: "value" },
+      series: series.map((s) => ({
+        name: s.name,
+        type: "bar",
+        data: s.data,
+      })),
+    }),
+    [categories, series]
+  );
 
   return (
     <Card>
@@ -38,3 +48,5 @@ export function VotesBarChart({
     </Card>
   );
 }
+
+export const VotesBarChart = memo(VotesBarChartComponent);

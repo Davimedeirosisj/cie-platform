@@ -1,6 +1,9 @@
+"use client";
+
+import { memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export function KpiCard({
+function KpiCardComponent({
   label,
   value,
   hint,
@@ -21,3 +24,5 @@ export function KpiCard({
     </Card>
   );
 }
+
+export const KpiCard = memo(KpiCardComponent);

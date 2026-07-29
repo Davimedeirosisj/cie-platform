@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useCampaignStore } from "@/stores/campaign-store";
 import type { Campanha } from "@/lib/types/campanha";
@@ -74,13 +74,30 @@ export function DashboardContent({ counts }: { counts: Counts }) {
   const percentualMeta =
     metaTotal && metaTotal > 0 ? Math.round((totalSelecionada / metaTotal) * 100) : null;
 
-  const maioresCrescimentos = [...comparacao]
-    .sort((a, b) => b.variacao_absoluta - a.variacao_absoluta)
-    .slice(0, 5);
-  const maioresQuedas = [...comparacao]
-    .filter((r) => r.variacao_absoluta < 0)
-    .sort((a, b) => a.variacao_absoluta - b.variacao_absoluta)
-    .slice(0, 5);
+  const handleCampanhaAChange = useCallback((v: string | null) => {
+    if (v) setCampanhaA(v);
+  }, []);
+
+  const handleCampanhaBChange = useCallback((v: string | null) => {
+    if (v) setCampanhaB(v);
+  }, []);
+
+  const maioresCrescimentos = useMemo(
+    () =>
+      [...comparacao]
+        .sort((a, b) => b.variacao_absoluta - a.variacao_absoluta)
+        .slice(0, 5),
+    [comparacao]
+  );
+
+  const maioresQuedas = useMemo(
+    () =>
+      [...comparacao]
+        .filter((r) => r.variacao_absoluta < 0)
+        .sort((a, b) => a.variacao_absoluta - b.variacao_absoluta)
+        .slice(0, 5),
+    [comparacao]
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -131,7 +148,7 @@ export function DashboardContent({ counts }: { counts: Counts }) {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-4">
-            <Select value={campanhaA} onValueChange={(v) => v && setCampanhaA(v)}>
+            <Select value={campanhaA} onValueChange={handleCampanhaAChange}>
               <SelectTrigger className="w-56">
                 <SelectValue placeholder="Campanha A" />
               </SelectTrigger>
@@ -143,7 +160,7 @@ export function DashboardContent({ counts }: { counts: Counts }) {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={campanhaB} onValueChange={(v) => v && setCampanhaB(v)}>
+            <Select value={campanhaB} onValueChange={handleCampanhaBChange}>
               <SelectTrigger className="w-56">
                 <SelectValue placeholder="Campanha B" />
               </SelectTrigger>
@@ -173,7 +190,11 @@ export function DashboardContent({ counts }: { counts: Counts }) {
   );
 }
 
-function ComparacaoTable({ rows }: { rows: (ComparacaoRow & { nome: string })[] }) {
+const ComparacaoTable = memo(function ComparacaoTableComponent({
+  rows,
+}: {
+  rows: (ComparacaoRow & { nome: string })[];
+}) {
   if (rows.length === 0) {
     return <p className="text-sm text-muted-foreground">Sem dados.</p>;
   }
@@ -204,4 +225,4 @@ function ComparacaoTable({ rows }: { rows: (ComparacaoRow & { nome: string })[] 
       </TableBody>
     </Table>
   );
-}
+});
