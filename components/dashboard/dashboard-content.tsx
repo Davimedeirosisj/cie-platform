@@ -8,10 +8,9 @@ import {
   fetchTotalVotosPorCampanha,
   fetchMetaTotalMunicipio,
   fetchComparacaoMunicipios,
-  type TopItem,
   type ComparacaoRow,
 } from "@/lib/queries/dashboard";
-import { fetchAllTopItems } from "@/lib/queries/dashboard-optimized";
+import { useTopItems } from "@/lib/hooks";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { TopList } from "@/components/dashboard/top-list";
 import { VotesBarChart } from "@/components/dashboard/votes-bar-chart";
@@ -34,10 +33,8 @@ export function DashboardContent({ counts }: { counts: Counts }) {
   const [totaisPorCampanha, setTotaisPorCampanha] = useState<Record<string, number>>({});
   const [metaTotal, setMetaTotal] = useState<number | null>(null);
 
-  const [topMunicipios, setTopMunicipios] = useState<TopItem[]>([]);
-  const [topBairros, setTopBairros] = useState<TopItem[]>([]);
-  const [topZonas, setTopZonas] = useState<TopItem[]>([]);
-  const [topSecoes, setTopSecoes] = useState<TopItem[]>([]);
+  // Caching layer via SWR hook (Fase 2 Sprint 2)
+  const { data: topItems, isLoading: isLoadingTopItems } = useTopItems(campanhaId);
 
   const [campanhaA, setCampanhaA] = useState<string | undefined>();
   const [campanhaB, setCampanhaB] = useState<string | undefined>();
@@ -67,15 +64,6 @@ export function DashboardContent({ counts }: { counts: Counts }) {
     fetchMetaTotalMunicipio(campanhaMeta.id).then(setMetaTotal);
   }, [campanhas]);
 
-  useEffect(() => {
-    if (!campanhaId) return;
-    fetchAllTopItems(campanhaId).then((data) => {
-      setTopMunicipios(data.municipios);
-      setTopBairros(data.bairros);
-      setTopZonas(data.zonas);
-      setTopSecoes(data.secoes);
-    });
-  }, [campanhaId]);
 
   useEffect(() => {
     if (!campanhaA || !campanhaB) return;
@@ -123,15 +111,16 @@ export function DashboardContent({ counts }: { counts: Counts }) {
         <>
           <VotesBarChart
             title="Top 5 Municípios — campanha selecionada"
-            categories={topMunicipios.map((m) => m.label)}
-            series={[{ name: "Votos", data: topMunicipios.map((m) => m.votos) }]}
+            categories={topItems.municipios.map((m) => m.label)}
+            series={[{ name: "Votos", data: topItems.municipios.map((m) => m.votos) }]}
+            isLoading={isLoadingTopItems}
           />
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <TopList title="Top Municípios" items={topMunicipios} />
-            <TopList title="Top Bairros" items={topBairros} />
-            <TopList title="Top Zonas" items={topZonas} />
-            <TopList title="Top Seções" items={topSecoes} />
+            <TopList title="Top Municípios" items={topItems.municipios} isLoading={isLoadingTopItems} />
+            <TopList title="Top Bairros" items={topItems.bairros} isLoading={isLoadingTopItems} />
+            <TopList title="Top Zonas" items={topItems.zonas} isLoading={isLoadingTopItems} />
+            <TopList title="Top Seções" items={topItems.secoes} isLoading={isLoadingTopItems} />
           </div>
         </>
       )}

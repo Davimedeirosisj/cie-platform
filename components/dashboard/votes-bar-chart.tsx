@@ -7,10 +7,12 @@ export function VotesBarChart({
   title,
   categories,
   series,
+  isLoading,
 }: {
   title: string;
   categories: string[];
   series: { name: string; data: number[] }[];
+  isLoading?: boolean;
 }) {
   const option = {
     tooltip: { trigger: "axis" },

@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export function TopList({
   title,
   items,
+  isLoading,
 }: {
   title: string;
   items: { id: string; label: string; sublabel?: string; votos: number; href: string }[];
+  isLoading?: boolean;
 }) {
   return (
     <Card>
