@@ -5,16 +5,13 @@ import { createClient } from "@/lib/supabase/client";
 import { useCampaignStore } from "@/stores/campaign-store";
 import type { Campanha } from "@/lib/types/campanha";
 import {
-  fetchTopMunicipios,
-  fetchTopBairros,
-  fetchTopZonas,
-  fetchTopSecoes,
   fetchTotalVotosPorCampanha,
   fetchMetaTotalMunicipio,
   fetchComparacaoMunicipios,
   type TopItem,
   type ComparacaoRow,
 } from "@/lib/queries/dashboard";
+import { fetchAllTopItems } from "@/lib/queries/dashboard-optimized";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { TopList } from "@/components/dashboard/top-list";
 import { VotesBarChart } from "@/components/dashboard/votes-bar-chart";
@@ -72,10 +69,12 @@ export function DashboardContent({ counts }: { counts: Counts }) {
 
   useEffect(() => {
     if (!campanhaId) return;
-    fetchTopMunicipios(campanhaId).then(setTopMunicipios);
-    fetchTopBairros(campanhaId).then(setTopBairros);
-    fetchTopZonas(campanhaId).then(setTopZonas);
-    fetchTopSecoes(campanhaId).then(setTopSecoes);
+    fetchAllTopItems(campanhaId).then((data) => {
+      setTopMunicipios(data.municipios);
+      setTopBairros(data.bairros);
+      setTopZonas(data.zonas);
+      setTopSecoes(data.secoes);
+    });
   }, [campanhaId]);
 
   useEffect(() => {
