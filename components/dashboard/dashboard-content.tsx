@@ -36,8 +36,8 @@ export function DashboardContent({ counts }: { counts: Counts }) {
   // Caching layer via SWR hook (Fase 2 Sprint 2)
   const { data: topItems, isLoading: isLoadingTopItems } = useTopItems(campanhaId);
 
-  const [campanhaA, setCampanhaA] = useState<string | undefined>();
-  const [campanhaB, setCampanhaB] = useState<string | undefined>();
+  const [campanhaA, setCampanhaA] = useState<string>("");
+  const [campanhaB, setCampanhaB] = useState<string>("");
   const [comparacao, setComparacao] = useState<(ComparacaoRow & { nome: string })[]>([]);
 
   useEffect(() => {
@@ -50,8 +50,8 @@ export function DashboardContent({ counts }: { counts: Counts }) {
         const lista = (data ?? []) as Campanha[];
         setCampanhas(lista);
         if (lista.length >= 2) {
-          setCampanhaA((prev) => prev ?? lista[0].id);
-          setCampanhaB((prev) => prev ?? lista[1].id);
+          setCampanhaA((prev) => prev || lista[0].id);
+          setCampanhaB((prev) => prev || lista[1].id);
         }
       });
 
