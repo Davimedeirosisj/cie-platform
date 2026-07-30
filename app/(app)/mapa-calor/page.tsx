@@ -1,10 +1,8 @@
-import { ModulePlaceholder } from "@/components/module-placeholder";
+import { hasMapboxToken } from "@/lib/map/config";
+import { MapboxTokenNotice } from "@/components/map/mapbox-token-notice";
+import { HeatmapMap } from "@/components/map/heatmap-map";
 
 export default function MapaCalorPage() {
-  return (
-    <ModulePlaceholder
-      title="Mapa de Calor"
-      description="Camadas de intensidade por campanha e Meta 2026 chegam na Fase 4."
-    />
-  );
+  if (!hasMapboxToken()) return <MapboxTokenNotice />;
+  return <HeatmapMap />;
 }

@@ -1,0 +1,197 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
+import { createClient } from "@/lib/supabase/client";
+import { useCampaignStore } from "@/stores/campaign-store";
+import { MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM, MAP_MUNICIPIO_ZOOM } from "@/lib/map/config";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { MetaEditor } from "@/components/territory/meta-editor";
+
+type GeoPoint = { id: string; nome: string; latitude: number; longitude: number; votos: number };
+type PanelState = { nivel: "municipio" | "bairro"; id: string; nome: string; votos: number } | null;
+
+export function InteractiveMap() {
+  const campanhaId = useCampaignStore((s) => s.selectedCampanhaId);
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const markers = useRef<mapboxgl.Marker[]>([]);
+
+  const [nivel, setNivel] = useState<"municipio" | "bairro">("municipio");
+  const [municipioAtual, setMunicipioAtual] = useState<{ id: string; nome: string } | null>(null);
+  const [panel, setPanel] = useState<PanelState>(null);
+
+  // Initialize map once
+  useEffect(() => {
+    if (!mapContainer.current || map.current) return;
+    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: "mapbox://styles/mapbox/light-v11",
+      center: MAP_DEFAULT_CENTER,
+      zoom: MAP_DEFAULT_ZOOM,
+    });
+    map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+    return () => {
+      map.current?.remove();
+      map.current = null;
+    };
+  }, []);
+
+  // Fetch + render markers whenever level/município/campanha changes
+  useEffect(() => {
+    if (!map.current || !campanhaId) return;
+    let cancelled = false;
+
+    async function loadAndRender() {
+      const supabase = createClient();
+      let pontos: GeoPoint[] = [];
+
+      if (nivel === "municipio") {
+        const [{ data: municipios }, { data: votos }] = await Promise.all([
+          supabase
+            .from("municipios")
+            .select("id, nome, latitude, longitude")
+            .not("latitude", "is", null)
+            .not("longitude", "is", null),
+          supabase
+            .from("vw_votos_municipio")
+            .select("municipio_id, total_votos")
+            .eq("campanha_id", campanhaId!),
+        ]);
+        const votosById = new Map((votos ?? []).map((v) => [v.municipio_id, v.total_votos]));
+        pontos = (municipios ?? []).map((m) => ({
+          id: m.id,
+          nome: m.nome,
+          latitude: m.latitude!,
+          longitude: m.longitude!,
+          votos: votosById.get(m.id) ?? 0,
+        }));
+      } else if (municipioAtual) {
+        const [{ data: bairros }, { data: votos }] = await Promise.all([
+          supabase
+            .from("bairros")
+            .select("id, nome, latitude, longitude")
+            .eq("municipio_id", municipioAtual.id)
+            .not("latitude", "is", null)
+            .not("longitude", "is", null),
+          supabase
+            .from("vw_votos_bairro")
+            .select("bairro_id, total_votos")
+            .eq("campanha_id", campanhaId!),
+        ]);
+        const votosById = new Map((votos ?? []).map((v) => [v.bairro_id, v.total_votos]));
+        pontos = (bairros ?? []).map((b) => ({
+          id: b.id,
+          nome: b.nome,
+          latitude: b.latitude!,
+          longitude: b.longitude!,
+          votos: votosById.get(b.id) ?? 0,
+        }));
+      }
+
+      if (cancelled || !map.current) return;
+
+      markers.current.forEach((m) => m.remove());
+      markers.current = [];
+
+      for (const ponto of pontos) {
+        const el = document.createElement("button");
+        el.setAttribute("aria-label", ponto.nome);
+        el.style.width = "14px";
+        el.style.height = "14px";
+        el.style.borderRadius = "50%";
+        el.style.border = "2px solid white";
+        el.style.background = nivel === "municipio" ? "#2563eb" : "#16a34a";
+        el.style.cursor = "pointer";
+        el.style.boxShadow = "0 1px 3px rgba(0,0,0,0.4)";
+
+        el.addEventListener("click", () => {
+          setPanel({ nivel, id: ponto.id, nome: ponto.nome, votos: ponto.votos });
+          map.current?.flyTo({ center: [ponto.longitude, ponto.latitude], zoom: MAP_MUNICIPIO_ZOOM });
+        });
+
+        const marker = new mapboxgl.Marker({ element: el })
+          .setLngLat([ponto.longitude, ponto.latitude])
+          .addTo(map.current);
+        markers.current.push(marker);
+      }
+    }
+
+    loadAndRender();
+    return () => {
+      cancelled = true;
+    };
+  }, [nivel, municipioAtual, campanhaId]);
+
+  function handleVoltar() {
+    setNivel("municipio");
+    setMunicipioAtual(null);
+    setPanel(null);
+    map.current?.flyTo({ center: MAP_DEFAULT_CENTER, zoom: MAP_DEFAULT_ZOOM });
+  }
+
+  function handleVerBairros() {
+    if (panel?.nivel !== "municipio") return;
+    setMunicipioAtual({ id: panel.id, nome: panel.nome });
+    setNivel("bairro");
+    setPanel(null);
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2 text-sm">
+        <button onClick={handleVoltar} className="text-muted-foreground hover:underline">
+          Bahia
+        </button>
+        {municipioAtual && (
+          <>
+            <span className="text-muted-foreground">/</span>
+            <span className="font-medium">{municipioAtual.nome}</span>
+          </>
+        )}
+      </div>
+
+      {!campanhaId ? (
+        <p className="text-sm text-muted-foreground">Selecione uma campanha no topo da página.</p>
+      ) : (
+        <div ref={mapContainer} className="h-[600px] w-full rounded-lg border" />
+      )}
+
+      <Sheet open={!!panel} onOpenChange={(open) => !open && setPanel(null)}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>{panel?.nome}</SheetTitle>
+            <SheetDescription>
+              {panel?.votos.toLocaleString("pt-BR")} votos na campanha selecionada
+            </SheetDescription>
+          </SheetHeader>
+          {panel && (
+            <div className="flex flex-col gap-4 px-4">
+              <MetaEditor nivel={panel.nivel} targetId={panel.id} />
+              <div className="flex gap-2">
+                {panel.nivel === "municipio" && (
+                  <Button variant="outline" onClick={handleVerBairros}>
+                    Ver bairros
+                  </Button>
+                )}
+                <Button variant="outline" render={<Link href={`/${panel.nivel}s/${panel.id}`} />}>
+                  Ver detalhes
+                </Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}

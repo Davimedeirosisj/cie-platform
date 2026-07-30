@@ -48,6 +48,8 @@ export async function createMunicipio(
         estado_id: estado.id,
         nome: validated.nome,
         observacoes: validated.observacoes,
+        latitude: validated.latitude ?? null,
+        longitude: validated.longitude ?? null,
       });
 
       if (error) {
@@ -85,6 +87,8 @@ export async function updateMunicipio(
         .update({
           nome: validated.nome,
           observacoes: validated.observacoes,
+          latitude: validated.latitude ?? null,
+          longitude: validated.longitude ?? null,
         })
         .eq("id", validated.id);
 
@@ -178,6 +182,8 @@ export async function updateBairro(
         .update({
           nome: validated.nome,
           observacoes: validated.observacoes,
+          latitude: validated.latitude ?? null,
+          longitude: validated.longitude ?? null,
         })
         .eq("id", validated.id);
 

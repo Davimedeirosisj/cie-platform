@@ -67,6 +67,14 @@ export async function signUp(
     const validated = validateInput(SignUpSchema, formDataObj);
 
     const supabase = await createClient();
+
+    const { data: superAdminExists } = await supabase.rpc("fn_super_admin_exists");
+    if (superAdminExists) {
+      return {
+        error: "Cadastro fechado. Peça acesso a um administrador em Configurações › Usuários.",
+      };
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email: validated.email,
       password: validated.password,

@@ -1,10 +1,8 @@
-import { ModulePlaceholder } from "@/components/module-placeholder";
+import { hasMapboxToken } from "@/lib/map/config";
+import { MapboxTokenNotice } from "@/components/map/mapbox-token-notice";
+import { InteractiveMap } from "@/components/map/interactive-map";
 
 export default function MapaPage() {
-  return (
-    <ModulePlaceholder
-      title="Mapa Interativo"
-      description="Drill-down por zoom (Estado → Município → Bairro → Zona → Seção) chega na Fase 4."
-    />
-  );
+  if (!hasMapboxToken()) return <MapboxTokenNotice />;
+  return <InteractiveMap />;
 }

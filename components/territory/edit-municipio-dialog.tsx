@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { createMunicipio, type FormActionState } from "@/lib/actions/territorio";
+import { updateMunicipio, type FormActionState } from "@/lib/actions/territorio";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,9 +19,21 @@ import {
 
 const initialState: FormActionState = { error: null };
 
-export function CreateMunicipioDialog() {
+export function EditMunicipioDialog({
+  id,
+  nome,
+  observacoes,
+  latitude,
+  longitude,
+}: {
+  id: string;
+  nome: string;
+  observacoes: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, isPending] = useActionState(createMunicipio, initialState);
+  const [state, formAction, isPending] = useActionState(updateMunicipio, initialState);
   const prevPending = useRef(isPending);
 
   useEffect(() => {
@@ -31,22 +43,23 @@ export function CreateMunicipioDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button>Novo Município</Button>} />
+      <DialogTrigger render={<Button variant="outline">Editar</Button>} />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Novo Município</DialogTitle>
-          <DialogDescription>Cadastre um município da Bahia.</DialogDescription>
+          <DialogTitle>Editar Município</DialogTitle>
+          <DialogDescription>Atualize os dados do município.</DialogDescription>
         </DialogHeader>
         <form action={formAction} className="flex flex-col gap-4">
+          <input type="hidden" name="id" value={id} />
           <div className="flex flex-col gap-2">
             <Label htmlFor="nome">Nome</Label>
-            <Input id="nome" name="nome" required />
+            <Input id="nome" name="nome" required defaultValue={nome} />
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="observacoes">Observações</Label>
-            <Textarea id="observacoes" name="observacoes" rows={3} />
+            <Textarea id="observacoes" name="observacoes" rows={3} defaultValue={observacoes ?? ""} />
           </div>
-          <CoordinateFields />
+          <CoordinateFields latitudeDefault={latitude} longitudeDefault={longitude} />
           {state.error && <p className="text-sm text-destructive">{state.error}</p>}
           <DialogFooter>
             <Button type="submit" disabled={isPending}>

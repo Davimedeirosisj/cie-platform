@@ -5,6 +5,7 @@ import { deleteBairro } from "@/lib/actions/territorio";
 import { MetaEditor } from "@/components/territory/meta-editor";
 import { ObservacoesEditor } from "@/components/territory/observacoes-editor";
 import { CreateZonaDialog } from "@/components/territory/create-zona-dialog";
+import { EditBairroDialog } from "@/components/territory/edit-bairro-dialog";
 import { DeleteButton } from "@/components/territory/delete-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,7 +20,7 @@ export default async function BairroDetailPage({
 
   const { data: bairro } = await supabase
     .from("bairros")
-    .select("id, nome, observacoes, municipios(nome)")
+    .select("id, nome, observacoes, latitude, longitude, municipios(nome)")
     .eq("id", id)
     .single();
 
@@ -40,7 +41,16 @@ export default async function BairroDetailPage({
           <h1 className="text-2xl font-semibold">{bairro.nome}</h1>
           <p className="text-sm text-muted-foreground">{municipioNome}</p>
         </div>
-        <DeleteButton action={deleteBairro.bind(null, id)} label="Excluir Bairro" />
+        <div className="flex gap-2">
+          <EditBairroDialog
+            id={id}
+            nome={bairro.nome}
+            observacoes={bairro.observacoes}
+            latitude={bairro.latitude}
+            longitude={bairro.longitude}
+          />
+          <DeleteButton action={deleteBairro.bind(null, id)} label="Excluir Bairro" />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

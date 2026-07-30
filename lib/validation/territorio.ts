@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+// Empty-string coercion: optional lat/long form fields arrive as "" when
+// left blank, which z.coerce.number() would turn into 0 -- treat blank as
+// unset instead.
+const optionalCoordinate = (bound: number, label: string) =>
+  z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim() !== "" ? Number(v) : undefined))
+    .pipe(z.number().min(-bound, `${label} inválida`).max(bound, `${label} inválida`).optional());
+
 export const CreateMunicipioSchema = z.object({
   nome: z
     .string()
@@ -11,6 +21,8 @@ export const CreateMunicipioSchema = z.object({
     .max(1000, "Observações não podem exceder 1000 caracteres")
     .optional()
     .default(""),
+  latitude: optionalCoordinate(90, "Latitude"),
+  longitude: optionalCoordinate(180, "Longitude"),
 });
 
 export const EditMunicipioSchema = CreateMunicipioSchema.extend({
@@ -29,6 +41,8 @@ export const CreateBairroSchema = z.object({
     .max(1000, "Observações não podem exceder 1000 caracteres")
     .optional()
     .default(""),
+  latitude: optionalCoordinate(90, "Latitude"),
+  longitude: optionalCoordinate(180, "Longitude"),
 });
 
 export const EditBairroSchema = CreateBairroSchema.extend({

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CoordinateFields } from "@/components/territory/coordinate-fields";
 import {
   Select,
   SelectContent,
@@ -80,6 +81,7 @@ export function CreateBairroDialog(props: CreateBairroDialogProps) {
             <Label htmlFor="observacoes">Observações</Label>
             <Textarea id="observacoes" name="observacoes" rows={3} />
           </div>
+          <CoordinateFields />
           {state.error && <p className="text-sm text-destructive">{state.error}</p>}
           <DialogFooter>
             <Button type="submit" disabled={isPending || !selectedMunicipio}>
