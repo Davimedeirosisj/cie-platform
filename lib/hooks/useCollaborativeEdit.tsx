@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useCallback, useReducer, useRef, useEffect } from "react";
+import React, { useCallback, useReducer, useRef, useEffect } from "react";
 import { OperationalTransformManager, type Operation } from "@/lib/realtime/operational-transform";
 
 export type CollaborativeEditState = {
@@ -82,7 +82,7 @@ export function useCollaborativeEdit(
   onSync?: (operations: Operation[]) => Promise<void>
 ) {
   const otManagerRef = useRef(new OperationalTransformManager());
-  const syncTimerRef = useRef<NodeJS.Timer>();
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const [state, dispatch] = useReducer(editReducer, {
     data: initialData,

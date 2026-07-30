@@ -215,7 +215,7 @@ export async function generatePerformanceReport(
   // Run all tests
   metrics.push(await testQueryReduction(campanhaId));
   metrics.push(testRenderOptimization());
-  metrics.push(testCacheEffectiveness());
+  metrics.push(await testCacheEffectiveness());
   metrics.push(await testLoadTimeImprovement(campanhaId));
   metrics.push(testMemoryUsage());
   metrics.push(testBundleSize());

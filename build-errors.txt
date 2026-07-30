@@ -1,0 +1,31 @@
+﻿
+> cie@0.1.0 build
+> next build
+
+▲ Next.js 16.2.12 (Turbopack)
+- Environments: .env.local
+- Experiments (use with caution):
+  · serverActions
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 9.3s
+  Running TypeScript ...
+node.exe : Failed to type check.
+No linha:1 caractere:1
++ & "C:\nvm4w\nodejs/node.exe" "C:\nvm4w\nodejs/node_modules/npm/bin/np ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Failed to type check.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./lib/redis/redis-client.ts:17:23
+Type error: Cannot find module '@upstash/redis' or its corresponding type declarations.
+
+  [90m15 |[0m [90m */[0m
+  [90m16 |[0m
+[31m[1m>[0m [90m17 |[0m [36mimport[0m { [33mRedis[0m } [36mfrom[0m [32m"@upstash/redis"[0m;
+  [90m   |[0m                       [31m[1m^[0m
+  [90m18 |[0m
+  [90m19 |[0m [90m// Initialize Redis client (via environment variable)[0m
+  [90m20 |[0m [36mconst[0m redis = [36mnew[0m [33mRedis[0m({
+Next.js build worker exited with code: 1 and signal: null

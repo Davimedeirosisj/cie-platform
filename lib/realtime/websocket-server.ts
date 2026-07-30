@@ -88,7 +88,7 @@ class PresenceManager {
     const userIds = this.campanhaSubscribers.get(campanhaId) ?? new Set();
     return Array.from(userIds)
       .map((id) => this.users.get(id))
-      .filter((p) => p && Date.now() - p.lastSeen < 30000); // Active in last 30s
+      .filter((p): p is UserPresence => p !== undefined && Date.now() - p.lastSeen < 30000); // Active in last 30s
   }
 
   cleanupInactive(): number {
