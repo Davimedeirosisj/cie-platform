@@ -73,17 +73,23 @@ export async function resetRateLimit(type: RateLimitType): Promise<void> {
   rateLimitStore.delete(key);
 }
 
-// Cleanup: remover entradas expiradas a cada 5 min
-if (typeof global !== "undefined") {
-  const globalThis_ = global as any;
-  if (!globalThis_._rateLimitCleanupInterval) {
-    globalThis_._rateLimitCleanupInterval = setInterval(() => {
-      const now = Date.now();
-      for (const [key, entry] of rateLimitStore.entries()) {
-        if (now > entry.resetTime) {
-          rateLimitStore.delete(key);
-        }
+// Note: this store is an in-memory Map, scoped to a single server process.
+// On Vercel's serverless runtime each cold start gets its own instance, so
+// these limits are best-effort (not a hard guarantee) rather than a global
+// rate limit across all traffic. Fine for a low-traffic, single-admin
+// internal tool; revisit with a shared store (e.g. a Postgres table) if
+// this ever needs to hold under real abuse.
+declare global {
+  var _rateLimitCleanupInterval: ReturnType<typeof setInterval> | undefined;
+}
+
+if (typeof global !== "undefined" && !global._rateLimitCleanupInterval) {
+  global._rateLimitCleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of rateLimitStore.entries()) {
+      if (now > entry.resetTime) {
+        rateLimitStore.delete(key);
       }
-    }, 5 * 60 * 1000);
-  }
+    }
+  }, 5 * 60 * 1000);
 }

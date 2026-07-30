@@ -1,5 +1,5 @@
 -- Centro de Inteligência Eleitoral (CIE)
--- 0010: Strategic indexes for query optimization
+-- 0009: Strategic indexes for query optimization
 --
 -- Performance Analysis Results:
 -- - Aggregation views (vw_votos_*) benefit from composite indexes
@@ -87,10 +87,10 @@ create index idx_bairros_nome_trgm
   on bairros using gin (nome gin_trgm_ops);
 
 create index idx_zonas_numero_trgm
-  on zonas using gin (numero_zona::text gin_trgm_ops);
+  on zonas using gin ((numero_zona::text) gin_trgm_ops);
 
 create index idx_secoes_numero_trgm
-  on secoes using gin (numero_secao::text gin_trgm_ops);
+  on secoes using gin ((numero_secao::text) gin_trgm_ops);
 
 create index idx_secoes_local_trgm
   on secoes using gin (local_votacao gin_trgm_ops);

@@ -3,6 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type TopItem = { id: string; label: string; sublabel?: string; votos: number; href: string };
 
@@ -42,14 +43,24 @@ function TopListComponent({
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        {items.length === 0 && (
-          <p className="text-sm text-muted-foreground">Sem dados para esta campanha ainda.</p>
+        {isLoading ? (
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-5 w-full" />
+            ))}
+          </div>
+        ) : (
+          <>
+            {items.length === 0 && (
+              <p className="text-sm text-muted-foreground">Sem dados para esta campanha ainda.</p>
+            )}
+            <ol className="flex flex-col gap-2">
+              {items.map((item, i) => (
+                <MemoizedTopListItem key={item.id} item={item} index={i} />
+              ))}
+            </ol>
+          </>
         )}
-        <ol className="flex flex-col gap-2">
-          {items.map((item, i) => (
-            <MemoizedTopListItem key={item.id} item={item} index={i} />
-          ))}
-        </ol>
       </CardContent>
     </Card>
   );

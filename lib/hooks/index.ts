@@ -4,4 +4,3 @@
  */
 
 export { useTopItems, type TopItemsData } from "./useTopItems";
-export { useRankings, type RankingsData } from "./useRankings";

@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { AuthUser, AuthorizationError } from "./protected-action";
 
-export type UserRole = "admin" | "gerente" | "consultor" | "leitor";
+// Must match the `user_role` Postgres enum (migration 0001_init_schema.sql).
+export type UserRole = "super_admin" | "admin" | "coordenador_regional" | "consultor";
 
 export async function getUserRole(userId: string): Promise<UserRole> {
   const supabase = await createClient();
@@ -44,7 +45,7 @@ export async function requireAdminOrOwner(
 ): Promise<void> {
   const userRole = await getUserRole(user.id);
 
-  const isAdmin = userRole === "admin";
+  const isAdmin = userRole === "super_admin" || userRole === "admin";
   const isOwner = resourceOwnerId === user.id;
 
   if (!isAdmin && !isOwner) {
@@ -55,39 +56,16 @@ export async function requireAdminOrOwner(
   }
 }
 
-export async function requireCampanhaAccess(
-  user: AuthUser,
-  campanhaId: string,
-): Promise<void> {
-  const supabase = await createClient();
-  const userRole = await getUserRole(user.id);
-
-  // Admins têm acesso a tudo
-  if (userRole === "admin") {
-    return;
-  }
-
-  // Para outros roles, verificar se tem acesso à campanha
-  const { data: access, error } = await supabase
-    .from("campanha_access")
-    .select("id")
-    .eq("campanha_id", campanhaId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (error || !access) {
-    console.warn(
-      `[AUTHORIZATION] User ${user.id} tentou acessar campanha ${campanhaId} sem permissão`,
-    );
-    throw new AuthorizationError("Você não tem permissão para acessar esta campanha");
-  }
-}
+// Note: v1.0 has no per-campaign access table (all campanhas are visible to
+// every authenticated role by design — see PRD). A requireCampanhaAccess()
+// helper would need a `campanha_access` table that doesn't exist yet; add it
+// here if/when territorial or campaign-level scoping is actually built.
 
 export const RoleHierarchy: Record<UserRole, number> = {
-  admin: 4,
-  gerente: 3,
-  consultor: 2,
-  leitor: 1,
+  super_admin: 4,
+  admin: 3,
+  coordenador_regional: 2,
+  consultor: 1,
 };
 
 export function hasHigherOrEqualRole(

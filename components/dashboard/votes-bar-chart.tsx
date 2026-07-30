@@ -3,6 +3,7 @@
 import { memo, useMemo } from "react";
 import ReactECharts from "echarts-for-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function VotesBarChartComponent({
   title,
@@ -43,7 +44,11 @@ function VotesBarChartComponent({
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ReactECharts option={option} style={{ height: 280 }} notMerge />
+        {isLoading ? (
+          <Skeleton className="h-[280px] w-full" />
+        ) : (
+          <ReactECharts option={option} style={{ height: 280 }} notMerge />
+        )}
       </CardContent>
     </Card>
   );

@@ -68,67 +68,64 @@ export async function fetchTop(
   const supabase = createClient();
   const config = TOP_CONFIG[nivel];
 
+  // Table/column names are only known at runtime (driven by `nivel`), so
+  // Supabase's generated types can't narrow these calls -- rows come back
+  // as untyped records and are read defensively below.
+  type Row = Record<string, unknown>;
+
   // Query 1: Fetch ranking data
   const { data: rankingRaw } = await supabase
     .from(config.rankingView)
-    .select("*" as any)
+    .select("*")
     .eq("campanha_id", campanhaId)
     .order("total_votos", { ascending: false })
     .limit(limit);
 
-  const ranking = rankingRaw as any[];
+  const ranking = (rankingRaw ?? []) as Row[];
 
-  if (!ranking || ranking.length === 0) return [];
+  if (ranking.length === 0) return [];
 
-  const ids = ranking.map((r) => (r as any)[config.idColumn] as string);
+  const ids = ranking.map((r) => r[config.idColumn] as string);
 
   // Query 2: Fetch names and parent info
-  // Note: Using 'as any' to avoid Supabase select typing issues with dynamic fields
-  const { data: dataRows } = await (
-    config.parentJoin
-      ? supabase
-          .from(config.dataTable)
-          .select(`id, ${config.nameField}, ${config.parentJoin}` as any)
-          .in("id", ids)
-      : supabase
-          .from(config.dataTable)
-          .select(`id, ${config.nameField}` as any)
-          .in("id", ids)
-  );
+  const selectClause = config.parentJoin
+    ? `id, ${config.nameField}, ${config.parentJoin}`
+    : `id, ${config.nameField}`;
+  const { data: dataRows } = await supabase
+    .from(config.dataTable)
+    .select(selectClause)
+    .in("id", ids);
 
   // Build lookup map
   const infoById = new Map(
-    (dataRows ?? []).map((row) => {
-      const data = row as any;
-      const nome = typeof data[config.nameField] === "number"
-        ? `${data[config.nameField]}`
-        : data[config.nameField];
+    ((dataRows ?? []) as unknown as Row[]).map((data) => {
+      const rawNome = data[config.nameField];
+      const nome = typeof rawNome === "number" ? `${rawNome}` : (rawNome as string);
+
+      const parentValue = config.parentJoin
+        ? Object.values(data).find(
+            (v): v is { nome: unknown } => typeof v === "object" && v !== null && "nome" in v,
+          )?.nome
+        : undefined;
 
       return [
-        data.id,
-        {
-          nome,
-          parent: config.parentJoin
-            ? Object.values(data).find(
-                (v) => typeof v === "object" && v !== null && "nome" in v
-              )?.nome
-            : undefined,
-        },
+        data.id as string,
+        { nome, parent: typeof parentValue === "string" ? parentValue : undefined },
       ];
     })
   );
 
   // Transform and return
   return ranking.map((r) => {
-    const id = r[config.idColumn as keyof typeof r] as string;
+    const id = r[config.idColumn] as string;
     const info = infoById.get(id);
     return {
       id,
       label: info?.nome ?? "—",
       sublabel: info?.parent,
-      votos: r.total_votos,
+      votos: r.total_votos as number,
       href: `/${nivel}s/${id}`,
-    } as TopItem;
+    };
   });
 }
 

@@ -16,7 +16,6 @@ import {
   CreateBairroSchema,
   EditBairroSchema,
   CreateZonaSchema,
-  EditZonaSchema,
   CreateSecaoSchema,
   EditSecaoSchema,
   ObservacoesEditorSchema,
@@ -396,14 +395,14 @@ export async function updateObservacoes(
       const { error } = await supabase
         .from(tabela)
         .update({ observacoes: validated.observacoes })
-        .eq("id", validated.municipio_id);
+        .eq("id", validated.id);
 
       if (error) {
         console.error(`[${user.id}] Erro ao atualizar observações:`, error);
         return { error: "Não foi possível salvar as observações." };
       }
 
-      revalidatePath(`/${tabela}/${validated.municipio_id}`);
+      revalidatePath(`/${tabela}/${validated.id}`);
       return noError;
     });
   } catch (error) {

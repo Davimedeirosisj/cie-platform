@@ -36,8 +36,6 @@ export async function runImport(
 
       const validated = validateInput(ImportBatchSchema, {
         campanha_id: campanhaId,
-        estado_id: "00000000-0000-0000-0000-000000000000", // Placeholder, será validado depois
-        batch_id: "00000000-0000-0000-0000-000000000000", // Placeholder
         rows,
       });
 

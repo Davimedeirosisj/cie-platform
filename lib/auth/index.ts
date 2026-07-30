@@ -13,7 +13,6 @@ export {
 export {
   requireRole,
   requireAdminOrOwner,
-  requireCampanhaAccess,
   hasHigherOrEqualRole,
   RoleHierarchy,
   type UserRole,

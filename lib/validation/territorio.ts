@@ -67,8 +67,20 @@ export const CreateSecaoSchema = z.object({
   zona_id: z.string().uuid("Zona inválida"),
 });
 
-export const EditSecaoSchema = CreateSecaoSchema.extend({
+// Not CreateSecaoSchema.extend(...): the edit form (EditSecaoLocalForm) only
+// ever submits id/local_votacao/endereco_local, never numero_secao/zona_id.
+export const EditSecaoSchema = z.object({
   id: z.string().uuid("ID inválido"),
+  local_votacao: z
+    .string()
+    .max(255, "Local de votação não pode exceder 255 caracteres")
+    .optional()
+    .default(""),
+  endereco_local: z
+    .string()
+    .max(500, "Endereço não pode exceder 500 caracteres")
+    .optional()
+    .default(""),
 });
 
 export const CreateMetaSchema = z.object({
@@ -92,8 +104,10 @@ export const EditMetaSchema = CreateMetaSchema.extend({
   id: z.string().uuid("ID inválido"),
 });
 
+// Shared by ObservacoesEditor for both municipios and bairros; the form
+// always submits the record id under the generic field name "id".
 export const ObservacoesEditorSchema = z.object({
-  municipio_id: z.string().uuid("Município inválido"),
+  id: z.string().uuid("ID inválido"),
   observacoes: z
     .string()
     .max(1000, "Observações não podem exceder 1000 caracteres")

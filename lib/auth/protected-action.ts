@@ -90,27 +90,29 @@ export function validateInput<T extends ZodSchema>(
   schema: T,
   data: unknown
 ): z.infer<T> {
-  try {
-    return schema.parse(data);
-  } catch (error: any) {
-    const messages = error.errors?.map((e: any) => `${e.path.join(".")}: ${e.message}`).join("; ");
-    throw new ValidationError(`Dados inválidos: ${messages || error.message}`);
+  const result = schema.safeParse(data);
+  if (!result.success) {
+    const messages = result.error.issues
+      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+      .join("; ");
+    throw new ValidationError(`Dados inválidos: ${messages}`);
   }
+  return result.data;
 }
 
-export function parseFormData(formData: FormData): Record<string, any> {
-  const data: Record<string, any> = {};
+type FormValue = FormDataEntryValue | FormDataEntryValue[];
+
+export function parseFormData(formData: FormData): Record<string, FormValue> {
+  const data: Record<string, FormValue> = {};
 
   formData.forEach((value, key) => {
     if (key.endsWith("[]")) {
       const arrayKey = key.slice(0, -2);
-      if (!data[arrayKey]) data[arrayKey] = [];
-      data[arrayKey].push(value);
-    } else if (data[key]) {
-      if (!Array.isArray(data[key])) {
-        data[key] = [data[key]];
-      }
-      data[key].push(value);
+      const existing = data[arrayKey];
+      data[arrayKey] = Array.isArray(existing) ? [...existing, value] : [value];
+    } else if (key in data) {
+      const existing = data[key];
+      data[key] = Array.isArray(existing) ? [...existing, value] : [existing, value];
     } else {
       data[key] = value;
     }
