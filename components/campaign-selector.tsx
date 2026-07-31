@@ -29,7 +29,13 @@ export function CampaignSelector() {
         setCampanhas(lista);
         setLoading(false);
 
-        const aindaValida = lista.some((c) => c.id === selectedCampanhaId);
+        // Read the CURRENT store value rather than the one this effect closed
+        // over: zustand rehydrates the persisted selection around mount, so the
+        // captured value can still be null here. Using it made every page load
+        // decide the saved choice was "invalid" and silently reset the user
+        // back to the newest campaign.
+        const atual = useCampaignStore.getState().selectedCampanhaId;
+        const aindaValida = lista.some((c) => c.id === atual);
         if (!aindaValida && lista.length > 0) {
           const ativa = lista.find((c) => c.status === "ativa") ?? lista[0];
           setSelectedCampanhaId(ativa.id);
