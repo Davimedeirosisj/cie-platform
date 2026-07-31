@@ -1,3 +1,6 @@
+"use client";
+
+import { useTransition } from "react";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -19,6 +22,8 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export function UserMenu({ nome, role }: { nome: string; role: string }) {
+  const [isPending, startTransition] = useTransition();
+
   const iniciais = nome
     .split(" ")
     .map((p) => p[0])
@@ -48,11 +53,15 @@ export function UserMenu({ nome, role }: { nome: string; role: string }) {
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <form action={signOut}>
-          <DropdownMenuItem render={<button type="submit" className="w-full text-left" />}>
-            Sair
-          </DropdownMenuItem>
-        </form>
+        {/* Calls the server action directly instead of wrapping a <button> in
+            a <form>: Base UI renders the item as its own element, and nesting
+            a real button inside it triggers a nativeButton warning. */}
+        <DropdownMenuItem
+          disabled={isPending}
+          onClick={() => startTransition(() => void signOut())}
+        >
+          {isPending ? "Saindo..." : "Sair"}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

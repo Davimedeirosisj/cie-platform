@@ -35,7 +35,7 @@ export function CreateMunicipioDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Novo Município</DialogTitle>
-          <DialogDescription>Cadastre um município da Bahia.</DialogDescription>
+          <DialogDescription>Cadastre um município do estado da campanha.</DialogDescription>
         </DialogHeader>
         <form action={formAction} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">

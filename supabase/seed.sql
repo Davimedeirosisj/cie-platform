@@ -2,7 +2,8 @@
 -- Applied once via execute_sql when the project was provisioned.
 -- Kept here so the seed is reproducible on a fresh database.
 
-insert into estados (sigla, nome) values ('BA', 'Bahia') on conflict do nothing;
+-- v1.0 operates in a single estado; the import assigns every município to it.
+insert into estados (sigla, nome) values ('CE', 'Ceará') on conflict do nothing;
 
 insert into campanhas (nome, cargo, ano, status, is_campanha_meta) values
   ('Campanha 2022', 'Deputada Federal', 2022, 'encerrada', false),

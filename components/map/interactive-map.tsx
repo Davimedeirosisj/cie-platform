@@ -29,6 +29,20 @@ export function InteractiveMap() {
   const [nivel, setNivel] = useState<"municipio" | "bairro">("municipio");
   const [municipioAtual, setMunicipioAtual] = useState<{ id: string; nome: string } | null>(null);
   const [panel, setPanel] = useState<PanelState>(null);
+  // Root of the drill-down breadcrumb: read from the DB rather than hardcoded,
+  // so changing the estado doesn't leave a stale name on the map.
+  const [estadoNome, setEstadoNome] = useState("Estado");
+
+  useEffect(() => {
+    createClient()
+      .from("estados")
+      .select("nome")
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.nome) setEstadoNome(data.nome);
+      });
+  }, []);
 
   // Initialize map once
   useEffect(() => {
@@ -151,7 +165,7 @@ export function InteractiveMap() {
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2 text-sm">
         <button onClick={handleVoltar} className="text-muted-foreground hover:underline">
-          Bahia
+          {estadoNome}
         </button>
         {municipioAtual && (
           <>
