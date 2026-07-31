@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { DeleteBatchButton } from "@/components/import/delete-batch-button";
 
 const STATUS_LABELS: Record<string, string> = {
   pendente: "Pendente",
@@ -39,9 +40,19 @@ export default async function ImportBatchDetailPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold">{batch.nome_arquivo}</h1>
-        <p className="text-sm text-muted-foreground">{campanha?.nome}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">{batch.nome_arquivo}</h1>
+          <p className="text-sm text-muted-foreground">
+            Gravado em <span className="font-medium">{campanha?.nome}</span>
+          </p>
+        </div>
+        <DeleteBatchButton
+          batchId={batch.id}
+          nomeArquivo={batch.nome_arquivo}
+          campanhaNome={campanha?.nome ?? ""}
+          linhasSucesso={batch.linhas_sucesso}
+        />
       </div>
 
       <Card>

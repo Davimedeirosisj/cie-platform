@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { AppSidebar } from "@/components/app-sidebar";
-import { CampaignSelector } from "@/components/campaign-selector";
+import { CampaignSelectorSlot } from "@/components/campaign-selector-slot";
 import { UserMenu } from "@/components/user-menu";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -24,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger />
           <Separator orientation="vertical" className="mr-2 h-4" />
-          <CampaignSelector />
+          <CampaignSelectorSlot />
           <div className="ml-auto">
             <UserMenu nome={profile?.nome ?? user!.email ?? ""} role={profile?.role ?? "consultor"} />
           </div>

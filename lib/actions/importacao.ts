@@ -106,6 +106,54 @@ export async function runImport(
   }
 }
 
+/**
+ * Removes an import and the votes it created, so a batch sent to the wrong
+ * campaign can be undone. Territórios created along the way are kept: other
+ * imports and manually-entered metas may already reference them.
+ */
+export async function deleteImportBatch(batchId: string): Promise<{ error: string | null }> {
+  try {
+    return await protectedAction(async (user) => {
+      if (!batchId || !/^[0-9a-f-]{36}$/.test(batchId)) {
+        throw new ValidationError("Lote inválido");
+      }
+
+      const supabase = await createClient();
+
+      const { error: votosError } = await supabase
+        .from("votos")
+        .delete()
+        .eq("import_batch_id", batchId);
+
+      if (votosError) {
+        console.error(`[${user.id}] Erro ao remover votos do lote:`, votosError);
+        return { error: "Não foi possível remover os votos deste lote." };
+      }
+
+      // import_row_errors cascades from the batch.
+      const { error: batchError } = await supabase
+        .from("import_batches")
+        .delete()
+        .eq("id", batchId);
+
+      if (batchError) {
+        console.error(`[${user.id}] Erro ao remover lote:`, batchError);
+        return { error: "Não foi possível remover o lote." };
+      }
+
+      revalidatePath("/importacao");
+      revalidatePath("/dashboard");
+      return { error: null };
+    });
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      return { error: error.message };
+    }
+    console.error("Erro em deleteImportBatch:", error);
+    return { error: "Erro ao remover importação. Tente novamente." };
+  }
+}
+
 export async function saveColumnMapping(
   nome: string,
   mapeamento: ColumnMapping,

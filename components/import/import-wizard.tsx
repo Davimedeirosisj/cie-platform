@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { useCampaignStore } from "@/stores/campaign-store";
 import { parseWorkbook, type ParsedSheet } from "@/lib/import/parse-xlsx";
 import { runImport, saveColumnMapping } from "@/lib/actions/importacao";
 import { SYSTEM_FIELDS, type ColumnMapping, type MappedRow, type SystemField } from "@/lib/types/import";
+import type { Campanha } from "@/lib/types/campanha";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,7 +50,12 @@ function describeGranularity(mapping: ColumnMapping): string {
 
 export function ImportWizard() {
   const router = useRouter();
-  const campanhaId = useCampaignStore((s) => s.selectedCampanhaId);
+
+  // Deliberately NOT the global toolbar campaign: that selector is a *view*
+  // filter, and silently reusing it here sent an "eleição 2024" file into
+  // Campanha 2026. The destination is chosen explicitly below.
+  const [destinoId, setDestinoId] = useState<string>("");
+  const [campanhas, setCampanhas] = useState<Campanha[]>([]);
 
   const [file, setFile] = useState<File | null>(null);
   const [sheet, setSheet] = useState<ParsedSheet | null>(null);
@@ -68,7 +73,15 @@ export function ImportWizard() {
       .select("id, nome, mapeamento")
       .order("created_at", { ascending: false })
       .then(({ data }) => setTemplates((data ?? []) as MappingTemplate[]));
+
+    supabase
+      .from("campanhas")
+      .select("id, nome, cargo, ano, status, is_campanha_meta")
+      .order("ano", { ascending: false })
+      .then(({ data }) => setCampanhas((data ?? []) as Campanha[]));
   }, []);
+
+  const destino = campanhas.find((c) => c.id === destinoId);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0];
@@ -104,12 +117,12 @@ export function ImportWizard() {
   }
 
   async function handleCommit() {
-    if (!campanhaId || !sheet || !file) return;
+    if (!destinoId || !sheet || !file) return;
     setCommitting(true);
     setError(null);
 
     const supabase = createClient();
-    const storagePath = `${campanhaId}/${crypto.randomUUID()}-${file.name}`;
+    const storagePath = `${destinoId}/${crypto.randomUUID()}-${file.name}`;
     const { error: uploadError } = await supabase.storage
       .from("import-uploads")
       .upload(storagePath, file);
@@ -121,7 +134,7 @@ export function ImportWizard() {
     }
 
     const mappedRows = buildMappedRows(sheet, mapping);
-    const result = await runImport(campanhaId, file.name, storagePath, mapping, mappedRows);
+    const result = await runImport(destinoId, file.name, storagePath, mapping, mappedRows);
     setCommitting(false);
 
     if (!result.ok) {
@@ -129,16 +142,6 @@ export function ImportWizard() {
       return;
     }
     router.push(`/importacao/${result.batchId}`);
-  }
-
-  if (!campanhaId) {
-    return (
-      <Card>
-        <CardContent className="pt-6 text-sm text-muted-foreground">
-          Selecione uma campanha no topo da página para importar votos.
-        </CardContent>
-      </Card>
-    );
   }
 
   const mappedRows = sheet ? buildMappedRows(sheet, mapping) : [];
@@ -159,7 +162,43 @@ export function ImportWizard() {
     <div className="flex flex-col gap-4">
       <Card>
         <CardHeader>
-          <CardTitle>1. Selecionar planilha</CardTitle>
+          <CardTitle>1. Campanha de destino</CardTitle>
+          <CardDescription>
+            Escolha em qual campanha estes votos serão gravados. Confira o ano: um arquivo de
+            2024 gravado em 2026 mistura os dados das eleições.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Select
+            items={Object.fromEntries(
+              campanhas.map((c) => [c.id, `${c.nome} — ${c.cargo} (${c.ano})`]),
+            )}
+            value={destinoId}
+            onValueChange={(v) => v && setDestinoId(v)}
+          >
+            <SelectTrigger className="w-96">
+              <SelectValue placeholder="Selecione a campanha de destino" />
+            </SelectTrigger>
+            <SelectContent>
+              {campanhas.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.nome} — {c.cargo} ({c.ano})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {destino?.is_campanha_meta && (
+            <p className="mt-2 text-sm text-destructive">
+              Atenção: {destino.nome} é a campanha de metas (eleição futura). Só importe votos
+              aqui se for realmente essa a intenção.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>2. Selecionar planilha</CardTitle>
           <CardDescription>
             Arquivo .xlsx, .xls ou .csv com os votos desta campanha.
           </CardDescription>
@@ -183,7 +222,7 @@ export function ImportWizard() {
       {sheet && (
         <Card>
           <CardHeader>
-            <CardTitle>2. Mapear colunas</CardTitle>
+            <CardTitle>3. Mapear colunas</CardTitle>
             <CardDescription>
               Relacione as colunas da planilha aos campos do sistema.
             </CardDescription>
@@ -267,7 +306,7 @@ export function ImportWizard() {
       {sheet && (
         <Card>
           <CardHeader>
-            <CardTitle>3. Pré-visualização e importação</CardTitle>
+            <CardTitle>4. Pré-visualização e importação</CardTitle>
             <CardDescription>
               {requiredFilled ? (
                 <>
@@ -312,12 +351,20 @@ export function ImportWizard() {
 
             {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
 
-            <Button className="mt-4" onClick={handleCommit} disabled={committing || !requiredFilled}>
+            {/* The destination is restated here so it is confirmed at the
+                moment of writing, not just chosen four steps earlier. */}
+            <Button
+              className="mt-4"
+              onClick={handleCommit}
+              disabled={committing || !requiredFilled || !destinoId}
+            >
               {committing
                 ? "Importando..."
-                : requiredFilled
-                  ? `Importar ${mappedRows.length} linhas`
-                  : "Mapeie os campos obrigatórios para importar"}
+                : !destinoId
+                  ? "Escolha a campanha de destino no passo 1"
+                  : requiredFilled
+                    ? `Importar ${mappedRows.length} linhas em ${destino?.nome ?? ""}`
+                    : "Mapeie os campos obrigatórios para importar"}
             </Button>
           </CardContent>
         </Card>
