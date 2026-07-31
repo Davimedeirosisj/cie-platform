@@ -137,6 +137,13 @@ export function ImportWizard() {
   const invalidCount = sheet ? countInvalidRows(mappedRows) : 0;
   const requiredFilled = SYSTEM_FIELDS.filter((f) => f.required).every((f) => mapping[f.field]);
 
+  // Spreadsheet headers are their own labels; only the NONE sentinel needs
+  // mapping so the trigger doesn't render "__none__".
+  const headerItems: Record<string, string> = {
+    [NONE]: "— nenhuma —",
+    ...Object.fromEntries((sheet?.headers ?? []).map((h) => [h, h])),
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <Card>
@@ -167,7 +174,10 @@ export function ImportWizard() {
             {templates.length > 0 && (
               <div className="flex flex-col gap-2">
                 <Label>Usar modelo salvo</Label>
-                <Select onValueChange={(v: string | null) => v && applyTemplate(v)}>
+                <Select
+                  items={Object.fromEntries(templates.map((t) => [t.id, t.nome]))}
+                  onValueChange={(v: string | null) => v && applyTemplate(v)}
+                >
                   <SelectTrigger className="w-72">
                     <SelectValue placeholder="Selecione um modelo" />
                   </SelectTrigger>
@@ -189,6 +199,7 @@ export function ImportWizard() {
                     {label} {required && <span className="text-destructive">*</span>}
                   </Label>
                   <Select
+                    items={headerItems}
                     value={mapping[field] ?? NONE}
                     onValueChange={(value) =>
                       setMapping((prev) => ({

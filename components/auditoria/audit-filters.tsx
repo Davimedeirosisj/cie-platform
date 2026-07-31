@@ -26,6 +26,18 @@ const ACOES = [
   { value: "delete", label: "Exclusão" },
 ];
 
+// Base UI resolves trigger labels from these maps; the ALL sentinel is
+// included so the "Todas as..." option renders as text, not "__all__".
+const TABELA_ITEMS: Record<string, string> = {
+  [ALL]: "Todas as tabelas",
+  ...Object.fromEntries(TABELAS.map((t) => [t.value, t.label])),
+};
+
+const ACAO_ITEMS: Record<string, string> = {
+  [ALL]: "Todas as ações",
+  ...Object.fromEntries(ACOES.map((a) => [a.value, a.label])),
+};
+
 export function AuditFilters({ tabela, acao }: { tabela?: string; acao?: string }) {
   const router = useRouter();
 
@@ -41,7 +53,7 @@ export function AuditFilters({ tabela, acao }: { tabela?: string; acao?: string 
 
   return (
     <div className="flex gap-2">
-      <Select value={tabela ?? ALL} onValueChange={(v) => v && updateParam("tabela", v)}>
+      <Select items={TABELA_ITEMS} value={tabela ?? ALL} onValueChange={(v) => v && updateParam("tabela", v)}>
         <SelectTrigger className="w-40">
           <SelectValue placeholder="Tabela" />
         </SelectTrigger>
@@ -54,7 +66,7 @@ export function AuditFilters({ tabela, acao }: { tabela?: string; acao?: string 
           ))}
         </SelectContent>
       </Select>
-      <Select value={acao ?? ALL} onValueChange={(v) => v && updateParam("acao", v)}>
+      <Select items={ACAO_ITEMS} value={acao ?? ALL} onValueChange={(v) => v && updateParam("acao", v)}>
         <SelectTrigger className="w-40">
           <SelectValue placeholder="Ação" />
         </SelectTrigger>

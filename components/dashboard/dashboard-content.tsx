@@ -99,6 +99,12 @@ export function DashboardContent({ counts }: { counts: Counts }) {
     [comparacao]
   );
 
+  // Base UI needs an items map to render labels (not raw ids) in the trigger.
+  const campanhaItems = useMemo(
+    () => Object.fromEntries(campanhas.map((c) => [c.id, c.nome])),
+    [campanhas]
+  );
+
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -148,7 +154,7 @@ export function DashboardContent({ counts }: { counts: Counts }) {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-4">
-            <Select value={campanhaA} onValueChange={handleCampanhaAChange}>
+            <Select items={campanhaItems} value={campanhaA} onValueChange={handleCampanhaAChange}>
               <SelectTrigger className="w-56">
                 <SelectValue placeholder="Campanha A" />
               </SelectTrigger>
@@ -160,7 +166,7 @@ export function DashboardContent({ counts }: { counts: Counts }) {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={campanhaB} onValueChange={handleCampanhaBChange}>
+            <Select items={campanhaItems} value={campanhaB} onValueChange={handleCampanhaBChange}>
               <SelectTrigger className="w-56">
                 <SelectValue placeholder="Campanha B" />
               </SelectTrigger>

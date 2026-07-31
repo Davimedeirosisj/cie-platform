@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createCampanha } from "@/lib/actions/campanhas";
+import { STATUS_LABELS } from "@/components/campanhas/campanha-status-select";
 import type { FormActionState } from "@/lib/actions/territorio";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,14 +61,16 @@ export function CreateCampanhaDialog() {
           <div className="flex flex-col gap-2">
             <Label>Status</Label>
             <input type="hidden" name="status" value={status} />
-            <Select value={status} onValueChange={(v) => v && setStatus(v)}>
+            <Select items={STATUS_LABELS} value={status} onValueChange={(v) => v && setStatus(v)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="planejamento">Planejamento</SelectItem>
-                <SelectItem value="ativa">Ativa</SelectItem>
-                <SelectItem value="encerrada">Encerrada</SelectItem>
+                {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

@@ -53,6 +53,9 @@ export function CreateZonaDialog(props: CreateZonaDialogProps) {
             <div className="flex flex-col gap-2">
               <Label>Bairro</Label>
               <Select
+                items={Object.fromEntries(
+                  props.bairros.map((b) => [b.id, `${b.nome} (${b.municipioNome})`]),
+                )}
                 value={selectedBairro}
                 onValueChange={(value) => value && setSelectedBairro(value)}
               >

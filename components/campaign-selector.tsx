@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useCampaignStore } from "@/stores/campaign-store";
 import type { Campanha } from "@/lib/types/campanha";
@@ -38,12 +38,20 @@ export function CampaignSelector() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Base UI's <SelectValue> renders the raw value unless the root is given an
+  // items map -- without this the trigger shows the campanha's UUID.
+  const items = useMemo(
+    () => Object.fromEntries(campanhas.map((c) => [c.id, `${c.nome} — ${c.cargo}`])),
+    [campanhas],
+  );
+
   if (loading) {
     return <div className="h-9 w-56 animate-pulse rounded-md bg-muted" />;
   }
 
   return (
     <Select
+      items={items}
       value={selectedCampanhaId ?? undefined}
       onValueChange={(value) => value && setSelectedCampanhaId(value)}
     >

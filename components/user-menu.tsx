@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -34,14 +35,18 @@ export function UserMenu({ nome, role }: { nome: string; role: string }) {
         <span className="hidden text-sm sm:inline">{nome}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>
-          <div className="flex flex-col">
-            <span>{nome}</span>
-            <span className="text-xs font-normal text-muted-foreground">
-              {ROLE_LABELS[role] ?? role}
-            </span>
-          </div>
-        </DropdownMenuLabel>
+        {/* Base UI requires GroupLabel (DropdownMenuLabel) to live inside a
+            Menu.Group, otherwise it throws "MenuGroupContext is missing". */}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>
+            <div className="flex flex-col">
+              <span>{nome}</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                {ROLE_LABELS[role] ?? role}
+              </span>
+            </div>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <form action={signOut}>
           <DropdownMenuItem render={<button type="submit" className="w-full text-left" />}>

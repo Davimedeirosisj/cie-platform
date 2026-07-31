@@ -57,6 +57,7 @@ export function CreateBairroDialog(props: CreateBairroDialogProps) {
             <div className="flex flex-col gap-2">
               <Label>Município</Label>
               <Select
+                items={Object.fromEntries(props.municipios.map((m) => [m.id, m.nome]))}
                 value={selectedMunicipio}
                 onValueChange={(value) => value && setSelectedMunicipio(value)}
               >

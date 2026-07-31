@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { createClient } from "@/lib/supabase/client";
@@ -142,10 +142,19 @@ export function HeatmapMap() {
     };
   }, [ready, camada, campanhas]);
 
+  // Base UI resolves the trigger label from this map, not from the items.
+  const camadaItems = useMemo(
+    () => ({
+      ...Object.fromEntries(campanhas.map((c) => [c.id, c.nome])),
+      [META_OPTION]: "Meta 2026",
+    }),
+    [campanhas],
+  );
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-4">
-        <Select value={camada} onValueChange={(v) => v && setCamada(v)}>
+        <Select items={camadaItems} value={camada} onValueChange={(v) => v && setCamada(v)}>
           <SelectTrigger className="w-56">
             <SelectValue placeholder="Camada" />
           </SelectTrigger>

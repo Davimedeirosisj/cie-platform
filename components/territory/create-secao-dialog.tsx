@@ -53,6 +53,7 @@ export function CreateSecaoDialog(props: CreateSecaoDialogProps) {
             <div className="flex flex-col gap-2">
               <Label>Zona</Label>
               <Select
+                items={Object.fromEntries(props.zonas.map((z) => [z.id, z.label]))}
                 value={selectedZona}
                 onValueChange={(value) => value && setSelectedZona(value)}
               >

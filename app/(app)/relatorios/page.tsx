@@ -77,7 +77,7 @@ export default function RelatoriosPage() {
         <CardContent className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-2">
             <Label>Nível</Label>
-            <Select value={nivel} onValueChange={(v) => v && setNivel(v as MetaNivel)}>
+            <Select items={NIVEL_LABELS} value={nivel} onValueChange={(v) => v && setNivel(v as MetaNivel)}>
               <SelectTrigger className="w-48">
                 <SelectValue />
               </SelectTrigger>

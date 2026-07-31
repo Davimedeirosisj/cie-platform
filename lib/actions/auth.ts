@@ -21,8 +21,10 @@ export async function signIn(
   _prevState: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
+  // NOTE: redirect() signals success by *throwing* NEXT_REDIRECT, so it must
+  // stay outside the try/catch below -- otherwise every successful login is
+  // caught and logged as if it had failed.
   try {
-    // Rate limiting
     await checkRateLimit("LOGIN");
 
     const formDataObj = parseFormData(formData);
@@ -41,8 +43,6 @@ export async function signIn(
 
     // Login bem-sucedido, resetar rate limit
     await resetRateLimit("LOGIN");
-
-    redirect("/dashboard");
   } catch (error) {
     if (error instanceof RateLimitError) {
       return { error: error.message };
@@ -53,14 +53,16 @@ export async function signIn(
     console.error("Erro em signIn:", error);
     return { error: "Erro ao fazer login. Tente novamente." };
   }
+
+  redirect("/dashboard");
 }
 
 export async function signUp(
   _prevState: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
+  // See the note in signIn(): redirect() must stay outside the try/catch.
   try {
-    // Rate limiting
     await checkRateLimit("SIGNUP");
 
     const formDataObj = parseFormData(formData);
@@ -95,8 +97,6 @@ export async function signUp(
 
     // Signup bem-sucedido, resetar rate limit
     await resetRateLimit("SIGNUP");
-
-    redirect("/dashboard");
   } catch (error) {
     if (error instanceof RateLimitError) {
       return { error: error.message };
@@ -107,6 +107,8 @@ export async function signUp(
     console.error("Erro em signUp:", error);
     return { error: "Erro ao criar conta. Tente novamente." };
   }
+
+  redirect("/dashboard");
 }
 
 export async function signOut(): Promise<void> {

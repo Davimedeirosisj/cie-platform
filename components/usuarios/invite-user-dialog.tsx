@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { inviteUser } from "@/lib/actions/usuarios";
+import { ROLE_LABELS } from "@/components/usuarios/role-select";
 import type { FormActionState } from "@/lib/actions/territorio";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,15 +59,16 @@ export function InviteUserDialog() {
           <div className="flex flex-col gap-2">
             <Label>Perfil de acesso</Label>
             <input type="hidden" name="role" value={role} />
-            <Select value={role} onValueChange={(v) => v && setRole(v)}>
+            <Select items={ROLE_LABELS} value={role} onValueChange={(v) => v && setRole(v)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="super_admin">Super Administrador</SelectItem>
-                <SelectItem value="admin">Administrador</SelectItem>
-                <SelectItem value="coordenador_regional">Coordenador Regional</SelectItem>
-                <SelectItem value="consultor">Consultor</SelectItem>
+                {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

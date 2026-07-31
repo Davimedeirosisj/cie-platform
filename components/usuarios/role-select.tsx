@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const ROLE_LABELS: Record<string, string> = {
+export const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super Administrador",
   admin: "Administrador",
   coordenador_regional: "Coordenador Regional",
@@ -30,6 +30,7 @@ export function RoleSelect({
 
   return (
     <Select
+      items={ROLE_LABELS}
       value={role}
       onValueChange={(value) => {
         if (!value) return;
