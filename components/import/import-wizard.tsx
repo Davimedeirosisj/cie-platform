@@ -152,7 +152,12 @@ export function ImportWizard() {
           <CardDescription>Arquivo .xlsx com os votos desta campanha.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Input type="file" accept=".xlsx,.xls" onChange={handleFileChange} disabled={parsing} />
+          <Input
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            onChange={handleFileChange}
+            disabled={parsing}
+          />
           {parsing && <p className="mt-2 text-sm text-muted-foreground">Lendo planilha...</p>}
           {sheet && (
             <p className="mt-2 text-sm text-muted-foreground">
