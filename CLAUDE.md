@@ -52,28 +52,35 @@ app/
 │   ├── rankings/        # Vote rankings
 │   ├── mapa/            # Interactive territory map
 │   ├── mapa-calor/      # Heatmap visualization
-│   ├── relatorios/      # Reports
+│   ├── relatorios/      # Reports (CSV export, print)
 │   ├── importacao/      # Excel data import wizard
-│   ├── configuracoes/   # Campaign settings
+│   ├── configuracoes/   # Campanhas, usuarios, auditoria
 │   └── busca/           # Search across territory
 ├── layout.tsx           # Root layout with TooltipProvider
 └── page.tsx             # Redirect/public page
 
 lib/
-├── supabase/            # Client & server Supabase instances
-├── types/               # TypeScript type definitions
-├── actions/             # Server Actions (importacao, campanhas, territorio, auth)
-├── queries/             # Data fetching (dashboard, rankings)
-├── import/              # Excel parsing logic
-└── nav-items.ts         # Sidebar navigation config
+├── supabase/            # Client, server & admin (service-role) Supabase instances
+├── types/                # TypeScript type definitions
+├── actions/               # Server Actions (importacao, campanhas, territorio, auth, usuarios)
+├── queries/                # Data fetching (dashboard, dashboard-optimized, rankings)
+├── validation/              # Zod schemas, one file per domain
+├── auth/                     # protectedAction/validateInput wrapper, rate limiting, role checks
+├── import/                    # Excel parsing logic
+├── map/                        # Mapbox config/token check
+├── reports/                     # CSV export helper
+└── nav-items.ts                 # Sidebar navigation config
 
 components/
-├── ui/                  # Base shadcn/ui components (button, dialog, etc)
+├── ui/                  # Base shadcn/ui components (button, dialog, etc — Base UI, not Radix)
 ├── app-sidebar.tsx      # Main navigation sidebar
 ├── campaign-selector.tsx # Campaign picker dropdown
 ├── user-menu.tsx        # User profile menu
 ├── territory/           # Territory CRUD dialogs & forms
 ├── campanhas/           # Campaign management
+├── usuarios/            # Role/active-status management, invite dialog
+├── auditoria/           # Audit log filters
+├── map/                 # Interactive map + heatmap (Mapbox)
 ├── import/              # Import wizard
 ├── dashboard/           # Dashboard components (KPI cards, charts)
 └── rankings/            # Ranking table component
@@ -133,6 +140,12 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 ```
 
+**Optional Environment Variables**:
+```
+NEXT_PUBLIC_MAPBOX_TOKEN=   # enables /mapa and /mapa-calor; both show a setup notice without it
+SUPABASE_SERVICE_ROLE_KEY=  # server-only; enables inviting new users from Configurações > Usuários
+```
+
 **Next.js Config** (`next.config.ts`):
 - Server Actions body size limit: 10MB (for Excel imports)
 
@@ -144,7 +157,9 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 
 - `@supabase/ssr` - Server-side auth session management
 - `zustand` - Lightweight state management (campaign selection)
-- `shadcn` - Component library CLI
+- `zod` - Server Action input validation (`lib/validation/`)
+- `swr` - Client-side caching for dashboard top-items (`lib/hooks/useTopItems.ts`)
+- `shadcn` - Component library CLI (built on `@base-ui/react`, not Radix)
 - `echarts` + `mapbox-gl` - Data visualization
 - `xlsx` - Excel file parsing
 - `cmdk` - Command palette (used in search/filters)
@@ -153,11 +168,13 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 
 ## Development Notes
 
-- **No Middleware** currently configured; auth handled server-side in layouts
+- **Proxy (`proxy.ts`)** — Next.js 16's rename of `middleware.ts` — refreshes the Supabase session and redirects unauthenticated requests to `/login` (and authenticated ones away from `/login`/`/signup`) for every route except static assets
+- **Public signup is self-closing**: `/signup` only works until the first `super_admin` profile exists (checked via the `fn_super_admin_exists()` RPC in both the page and the `signUp` action); after that, new users are added from Configurações > Usuários (requires `SUPABASE_SERVICE_ROLE_KEY`)
 - **Large Imports**: Server Actions accept up to 10MB (Excel batch uploads)
-- **Territory Search**: `app/(app)/busca/` uses full-text search across territory
+- **Territory Search**: `app/(app)/busca/` calls the `fn_busca_global` RPC across all 4 territorial levels
 - **Sidebar Caching**: Campaign selector and user menu re-rendered per request (not cached)
 - **Type Safety**: Strict TypeScript mode; Supabase types generated from schema
+- **shadcn/ui runs on Base UI**, not Radix — components use the `render` prop for polymorphic rendering (e.g. `<DialogTrigger render={<Button />} />`), not `asChild`
 
 ## Deployment
 
