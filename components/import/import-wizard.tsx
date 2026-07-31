@@ -40,6 +40,14 @@ function countInvalidRows(rows: MappedRow[]): number {
   return rows.filter((row) => requiredFields.some((f) => !row[f]?.trim())).length;
 }
 
+/** The finest level the mapping provides -- that's where the votes get stored. */
+function describeGranularity(mapping: ColumnMapping): string {
+  if (mapping.secao) return "Seção";
+  if (mapping.zona) return "Zona";
+  if (mapping.bairro) return "Bairro";
+  return "Município";
+}
+
 export function ImportWizard() {
   const router = useRouter();
   const campanhaId = useCampaignStore((s) => s.selectedCampanhaId);
@@ -263,7 +271,8 @@ export function ImportWizard() {
             <CardDescription>
               {requiredFilled ? (
                 <>
-                  {mappedRows.length} linhas prontas
+                  {mappedRows.length} linhas prontas, gravadas no nível{" "}
+                  <span className="font-medium">{describeGranularity(mapping)}</span>
                   {invalidCount > 0 && (
                     <span className="text-destructive">
                       {" "}

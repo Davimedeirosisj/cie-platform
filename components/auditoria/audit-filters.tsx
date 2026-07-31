@@ -16,7 +16,7 @@ const TABELAS = [
   { value: "bairros", label: "Bairro" },
   { value: "zonas", label: "Zona" },
   { value: "secoes", label: "Seção" },
-  { value: "votos_secao", label: "Votos" },
+  { value: "votos", label: "Votos" },
   { value: "metas", label: "Meta" },
 ];
 

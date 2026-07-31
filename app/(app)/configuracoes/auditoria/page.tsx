@@ -21,7 +21,7 @@ const TABLE_LABELS: Record<string, string> = {
   bairros: "Bairro",
   zonas: "Zona",
   secoes: "Seção",
-  votos_secao: "Votos",
+  votos: "Votos",
   metas: "Meta",
 };
 
