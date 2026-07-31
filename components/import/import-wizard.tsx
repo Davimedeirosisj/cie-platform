@@ -135,7 +135,10 @@ export function ImportWizard() {
 
   const mappedRows = sheet ? buildMappedRows(sheet, mapping) : [];
   const invalidCount = sheet ? countInvalidRows(mappedRows) : 0;
-  const requiredFilled = SYSTEM_FIELDS.filter((f) => f.required).every((f) => mapping[f.field]);
+  const missingFields = SYSTEM_FIELDS.filter((f) => f.required && !mapping[f.field]).map(
+    (f) => f.label,
+  );
+  const requiredFilled = missingFields.length === 0;
 
   // Spreadsheet headers are their own labels; only the NONE sentinel needs
   // mapping so the trigger doesn't render "__none__".
@@ -149,7 +152,9 @@ export function ImportWizard() {
       <Card>
         <CardHeader>
           <CardTitle>1. Selecionar planilha</CardTitle>
-          <CardDescription>Arquivo .xlsx com os votos desta campanha.</CardDescription>
+          <CardDescription>
+            Arquivo .xlsx, .xls ou .csv com os votos desta campanha.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Input
@@ -248,42 +253,62 @@ export function ImportWizard() {
         </Card>
       )}
 
-      {sheet && requiredFilled && (
+      {/* Always rendered once a file is loaded: hiding this card until the
+          mapping was complete meant the import button silently didn't exist,
+          with nothing on screen explaining what was missing. */}
+      {sheet && (
         <Card>
           <CardHeader>
-            <CardTitle>3. Pré-visualização</CardTitle>
+            <CardTitle>3. Pré-visualização e importação</CardTitle>
             <CardDescription>
-              {mappedRows.length} linhas prontas
-              {invalidCount > 0 && (
-                <span className="text-destructive"> — {invalidCount} com campos obrigatórios vazios</span>
+              {requiredFilled ? (
+                <>
+                  {mappedRows.length} linhas prontas
+                  {invalidCount > 0 && (
+                    <span className="text-destructive">
+                      {" "}
+                      — {invalidCount} com campos obrigatórios vazios (serão listadas como erro)
+                    </span>
+                  )}
+                  .
+                </>
+              ) : (
+                <span className="text-destructive">
+                  Faltam mapear no passo 2: {missingFields.join(", ")}.
+                </span>
               )}
-              .
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {SYSTEM_FIELDS.map(({ field, label }) => (
-                    <TableHead key={field}>{label}</TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mappedRows.slice(0, 10).map((row, i) => (
-                  <TableRow key={i}>
-                    {SYSTEM_FIELDS.map(({ field }: { field: SystemField }) => (
-                      <TableCell key={field}>{row[field] || "—"}</TableCell>
+            {requiredFilled && (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {SYSTEM_FIELDS.map(({ field, label }) => (
+                      <TableHead key={field}>{label}</TableHead>
                     ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {mappedRows.slice(0, 10).map((row, i) => (
+                    <TableRow key={i}>
+                      {SYSTEM_FIELDS.map(({ field }: { field: SystemField }) => (
+                        <TableCell key={field}>{row[field] || "—"}</TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
 
             {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
 
-            <Button className="mt-4" onClick={handleCommit} disabled={committing}>
-              {committing ? "Importando..." : `Importar ${mappedRows.length} linhas`}
+            <Button className="mt-4" onClick={handleCommit} disabled={committing || !requiredFilled}>
+              {committing
+                ? "Importando..."
+                : requiredFilled
+                  ? `Importar ${mappedRows.length} linhas`
+                  : "Mapeie os campos obrigatórios para importar"}
             </Button>
           </CardContent>
         </Card>
