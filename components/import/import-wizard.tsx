@@ -166,11 +166,25 @@ export function ImportWizard() {
   );
   const requiredFilled = missingFields.length === 0;
 
+  // Files that legitimately have two columns sharing a header (e.g. a fixed
+  // "Município" label column alongside the real per-row one) get the second
+  // one renamed by the parser (Município_1). Without a sample value the two
+  // are indistinguishable by name alone -- that's exactly how a reused
+  // mapping template silently landed on the wrong one and sent an entire
+  // batch to a single fake "município".
+  const sampleByHeader: Record<string, string> = Object.fromEntries(
+    (sheet?.headers ?? []).map((h) => [h, sheet?.rows[0]?.[h] ?? ""]),
+  );
+  const headerLabel = (h: string) => {
+    const sample = sampleByHeader[h];
+    return sample ? `${h} (ex: ${sample.slice(0, 30)})` : h;
+  };
+
   // Spreadsheet headers are their own labels; only the NONE sentinel needs
   // mapping so the trigger doesn't render "__none__".
   const headerItems: Record<string, string> = {
     [NONE]: "— nenhuma —",
-    ...Object.fromEntries((sheet?.headers ?? []).map((h) => [h, h])),
+    ...Object.fromEntries((sheet?.headers ?? []).map((h) => [h, headerLabel(h)])),
   };
 
   return (
@@ -287,7 +301,7 @@ export function ImportWizard() {
                       <SelectItem value={NONE}>— nenhuma —</SelectItem>
                       {sheet.headers.map((h) => (
                         <SelectItem key={h} value={h}>
-                          {h}
+                          {headerLabel(h)}
                         </SelectItem>
                       ))}
                     </SelectContent>
