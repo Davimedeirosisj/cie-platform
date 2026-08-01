@@ -139,6 +139,10 @@ stores/
 - Parse logic: `lib/import/parse-xlsx.ts`
 - Batch insert via Server Action: `lib/actions/importacao.ts`
 - Note: Rows are sent as JSON to Server Actions (watch 10MB body limit)
+- **Imports create territories without coordinates**, so anything new is
+  invisible on `/mapa` and `/mapa-calor` until geocoded — run
+  `node scripts/geocode-territorios.mjs municipios` (or `bairros <MUNICIPIO>`),
+  review the UPDATE it prints, then apply it
 
 ### Dashboard & Analytics
 - KPI calculations in `lib/queries/dashboard.ts`
