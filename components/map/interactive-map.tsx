@@ -175,11 +175,17 @@ export function InteractiveMap() {
         )}
       </div>
 
-      {!campanhaId ? (
-        <p className="text-sm text-muted-foreground">Selecione uma campanha no topo da página.</p>
-      ) : (
-        <div ref={mapContainer} className="h-[600px] w-full rounded-lg border" />
+      {!campanhaId && (
+        <p className="text-sm text-muted-foreground">
+          Selecione uma campanha no topo da página para ver os votos no mapa.
+        </p>
       )}
+
+      {/* Always mounted: the init effect runs once and bails if this ref is
+          empty, and campanhaId arrives only after the persisted store
+          rehydrates -- gating the container behind it left the map never
+          initialised. Only the markers depend on the campanha. */}
+      <div ref={mapContainer} className="h-[600px] w-full rounded-lg border" />
 
       <Sheet open={!!panel} onOpenChange={(open) => !open && setPanel(null)}>
         <SheetContent>
