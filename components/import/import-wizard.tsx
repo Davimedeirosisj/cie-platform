@@ -40,6 +40,18 @@ function countInvalidRows(rows: MappedRow[]): number {
   return rows.filter((row) => requiredFields.some((f) => !row[f]?.trim())).length;
 }
 
+/**
+ * Supabase Storage only accepts a restricted ASCII character set in object
+ * keys. Strip accents (CEARÁ -> CEARA) and replace anything else unsafe, so
+ * the upload doesn't fail with "Invalid key" on ordinary Brazilian filenames.
+ */
+function sanitizarNomeArquivo(nome: string): string {
+  return nome
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // combining accents left by NFD
+    .replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
 /** The finest level the mapping provides -- that's where the votes get stored. */
 function describeGranularity(mapping: ColumnMapping): string {
   if (mapping.secao) return "Seção";
@@ -122,7 +134,10 @@ export function ImportWizard() {
     setError(null);
 
     const supabase = createClient();
-    const storagePath = `${destinoId}/${crypto.randomUUID()}-${file.name}`;
+    // Storage rejects non-ASCII object keys ("Invalid key"), and TSE exports
+    // routinely carry accents ("...votacao-CEARÁ-1T-SECAO..."). Only the key
+    // is sanitised -- nome_arquivo keeps the original name for display.
+    const storagePath = `${destinoId}/${crypto.randomUUID()}-${sanitizarNomeArquivo(file.name)}`;
     const { error: uploadError } = await supabase.storage
       .from("import-uploads")
       .upload(storagePath, file);
