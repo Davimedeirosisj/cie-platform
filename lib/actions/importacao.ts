@@ -81,7 +81,15 @@ export async function runImport(
 
       if (rpcError || !resultado) {
         console.error(`[${user.id}] Erro no RPC de import:`, rpcError);
-        return { ok: false, error: "Falha ao processar a importação." };
+        // Surfacing the Postgres message (not just a generic label) is what
+        // made a statement-timeout on a large file diagnosable at all --
+        // there was nothing else pointing at the cause client-side.
+        return {
+          ok: false,
+          error: rpcError?.message
+            ? `Falha ao processar a importação: ${rpcError.message}`
+            : "Falha ao processar a importação.",
+        };
       }
 
       const importResult = validateInput(ImportResultSchema, resultado);
