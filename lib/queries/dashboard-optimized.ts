@@ -85,12 +85,16 @@ export async function fetchTop(
   type Row = Record<string, unknown>;
 
   // Query 1: Fetch ranking data
-  const { data: rankingRaw } = await supabase
+  const { data: rankingRaw, error: rankingError } = await supabase
     .from(config.rankingView)
     .select("*")
     .eq("campanha_id", campanhaId)
     .order("total_votos", { ascending: false })
     .limit(limit);
+
+  // These were failing silently: every Top list rendered "sem dados" while
+  // the real cause (an RLS statement timeout) never surfaced anywhere.
+  if (rankingError) console.error(`[fetchTop:${nivel}] ranking`, rankingError.message);
 
   const ranking = (rankingRaw ?? []) as Row[];
 
@@ -102,10 +106,12 @@ export async function fetchTop(
   const selectClause = config.parentJoin
     ? `id, ${config.nameField}, ${config.parentJoin}`
     : `id, ${config.nameField}`;
-  const { data: dataRows } = await supabase
+  const { data: dataRows, error: dataError } = await supabase
     .from(config.dataTable)
     .select(selectClause)
     .in("id", ids);
+
+  if (dataError) console.error(`[fetchTop:${nivel}] lookup`, dataError.message);
 
   // Build lookup map
   const infoById = new Map(

@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 
 export async function fetchTotalVotosPorCampanha(): Promise<Record<string, number>> {
   const supabase = createClient();
-  const { data } = await supabase.from("vw_votos_municipio").select("campanha_id, total_votos");
+  const { data, error } = await supabase.from("vw_votos_municipio").select("campanha_id, total_votos");
+  if (error) console.error("[fetchTotalVotosPorCampanha]", error);
   const totals: Record<string, number> = {};
   for (const row of data ?? []) {
     totals[row.campanha_id] = (totals[row.campanha_id] ?? 0) + row.total_votos;
