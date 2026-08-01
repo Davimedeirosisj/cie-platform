@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { createClient } from "@/lib/supabase/client";
+import { useCampaignStore } from "@/stores/campaign-store";
 import type { Campanha } from "@/lib/types/campanha";
 import { MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM } from "@/lib/map/config";
 import {
@@ -26,6 +27,7 @@ export function HeatmapMap() {
 
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
   const [camada, setCamada] = useState<string>("");
+  const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -36,7 +38,14 @@ export function HeatmapMap() {
       .then(({ data }) => {
         const lista = (data ?? []) as Campanha[];
         setCampanhas(lista);
-        setCamada((prev) => prev || lista[0]?.id || "");
+        // Open on the campaign the user is already looking at. Defaulting to
+        // lista[0] (newest by ano) landed on the future/meta campaign, which
+        // has no votes yet, so the layer rendered empty for no obvious reason.
+        const global = useCampaignStore.getState().selectedCampanhaId;
+        setCamada(
+          (prev) =>
+            prev || (global && lista.some((c) => c.id === global) ? global : lista[0]?.id) || "",
+        );
       });
   }, []);
 
@@ -51,6 +60,14 @@ export function HeatmapMap() {
     });
     map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
     map.current.on("load", () => setReady(true));
+    // Without this the map fails silently: the container just stays blank,
+    // with nothing in the console explaining why (bad token, blocked tiles,
+    // no WebGL...).
+    map.current.on("error", (e) => {
+      const msg = e.error?.message ?? "Falha ao carregar o mapa.";
+      console.error("[Mapbox]", msg, e.error);
+      setErro(msg);
+    });
     return () => {
       map.current?.remove();
       map.current = null;
@@ -63,11 +80,30 @@ export function HeatmapMap() {
 
     async function loadAndRender() {
       const supabase = createClient();
-      const { data: municipios } = await supabase
-        .from("municipios")
+
+      // Plot bairros when they have coordinates: a heatmap over municípios
+      // alone is a single blob in a one-city campaign. Falls back to
+      // municípios so the layer still works before bairros are geocoded.
+      const { data: bairros } = await supabase
+        .from("bairros")
         .select("id, latitude, longitude")
         .not("latitude", "is", null)
         .not("longitude", "is", null);
+
+      const usarBairros = (bairros ?? []).length > 0;
+
+      const { data: municipios } = usarBairros
+        ? { data: null }
+        : await supabase
+            .from("municipios")
+            .select("id, latitude, longitude")
+            .not("latitude", "is", null)
+            .not("longitude", "is", null);
+
+      const pontos = usarBairros ? bairros! : (municipios ?? []);
+      const nivel = usarBairros ? "bairro" : "municipio";
+      const fkColuna = usarBairros ? "bairro_id" : "municipio_id";
+      const vista = usarBairros ? "vw_votos_bairro" : "vw_votos_municipio";
 
       let pesoById = new Map<string, number>();
 
@@ -76,33 +112,57 @@ export function HeatmapMap() {
         if (campanhaMeta) {
           const { data: metas } = await supabase
             .from("metas")
-            .select("municipio_id, valor_meta")
+            .select(`${fkColuna}, valor_meta`)
             .eq("campanha_id", campanhaMeta.id)
-            .eq("nivel", "municipio");
-          pesoById = new Map((metas ?? []).map((m) => [m.municipio_id!, m.valor_meta]));
+            .eq("nivel", nivel);
+          pesoById = new Map(
+            ((metas ?? []) as unknown as Record<string, unknown>[]).map((m) => [
+              m[fkColuna] as string,
+              m.valor_meta as number,
+            ]),
+          );
         }
       } else {
         const { data: votos } = await supabase
-          .from("vw_votos_municipio")
-          .select("municipio_id, total_votos")
+          .from(vista)
+          .select(`${fkColuna}, total_votos`)
           .eq("campanha_id", camada);
-        pesoById = new Map((votos ?? []).map((v) => [v.municipio_id, v.total_votos]));
+        pesoById = new Map(
+          ((votos ?? []) as unknown as Record<string, unknown>[]).map((v) => [
+            v[fkColuna] as string,
+            v.total_votos as number,
+          ]),
+        );
       }
 
       if (cancelled || !map.current) return;
 
       const geojson: GeoJSON.FeatureCollection = {
         type: "FeatureCollection",
-        features: (municipios ?? []).map((m) => ({
+        features: pontos.map((p) => ({
           type: "Feature",
-          geometry: { type: "Point", coordinates: [m.longitude!, m.latitude!] },
-          properties: { peso: pesoById.get(m.id) ?? 0 },
+          geometry: { type: "Point", coordinates: [p.longitude!, p.latitude!] },
+          properties: { peso: pesoById.get(p.id) ?? 0 },
         })),
       };
+
+      // Scale the weight to the layer's own maximum: a fixed ceiling made
+      // bairro-level data (hundreds of votes) render almost invisible after
+      // being calibrated for município totals (thousands).
+      const maxPeso = Math.max(1, ...pontos.map((p) => pesoById.get(p.id) ?? 0));
 
       const source = map.current.getSource(SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
       if (source) {
         source.setData(geojson);
+        map.current.setPaintProperty(LAYER_ID, "heatmap-weight", [
+          "interpolate",
+          ["linear"],
+          ["get", "peso"],
+          0,
+          0,
+          maxPeso,
+          1,
+        ]);
       } else {
         map.current.addSource(SOURCE_ID, { type: "geojson", data: geojson });
         map.current.addLayer({
@@ -110,7 +170,7 @@ export function HeatmapMap() {
           type: "heatmap",
           source: SOURCE_ID,
           paint: {
-            "heatmap-weight": ["interpolate", ["linear"], ["get", "peso"], 0, 0, 5000, 1],
+            "heatmap-weight": ["interpolate", ["linear"], ["get", "peso"], 0, 0, maxPeso, 1],
             "heatmap-intensity": 1,
             "heatmap-radius": 40,
             "heatmap-opacity": 0.8,
@@ -176,6 +236,12 @@ export function HeatmapMap() {
           </CardContent>
         </Card>
       </div>
+
+      {erro && (
+        <p className="text-sm text-destructive">
+          Não foi possível carregar o mapa: {erro}
+        </p>
+      )}
 
       <div ref={mapContainer} className="h-[600px] w-full rounded-lg border" />
     </div>

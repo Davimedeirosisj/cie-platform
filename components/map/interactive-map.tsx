@@ -32,6 +32,7 @@ export function InteractiveMap() {
   // Root of the drill-down breadcrumb: read from the DB rather than hardcoded,
   // so changing the estado doesn't leave a stale name on the map.
   const [estadoNome, setEstadoNome] = useState("Estado");
+  const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
     createClient()
@@ -55,6 +56,12 @@ export function InteractiveMap() {
       zoom: MAP_DEFAULT_ZOOM,
     });
     map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+    // Surface Mapbox failures instead of leaving a blank container.
+    map.current.on("error", (e) => {
+      const msg = e.error?.message ?? "Falha ao carregar o mapa.";
+      console.error("[Mapbox]", msg, e.error);
+      setErro(msg);
+    });
     return () => {
       map.current?.remove();
       map.current = null;
@@ -179,6 +186,10 @@ export function InteractiveMap() {
         <p className="text-sm text-muted-foreground">
           Selecione uma campanha no topo da página para ver os votos no mapa.
         </p>
+      )}
+
+      {erro && (
+        <p className="text-sm text-destructive">Não foi possível carregar o mapa: {erro}</p>
       )}
 
       {/* Always mounted: the init effect runs once and bails if this ref is
