@@ -18,7 +18,7 @@ export default async function ZonaDetailPage({
 
   const { data: zona } = await supabase
     .from("zonas")
-    .select("id, numero_zona, bairros(nome, municipios(nome))")
+    .select("id, numero_zona, municipios(nome)")
     .eq("id", id)
     .single();
 
@@ -26,11 +26,19 @@ export default async function ZonaDetailPage({
 
   const { data: secoes } = await supabase
     .from("secoes")
-    .select("id, numero_secao, local_votacao")
+    .select("id, numero_secao, local_votacao, bairros(nome)")
     .eq("zona_id", id)
     .order("numero_secao");
 
-  const bairro = zona.bairros as unknown as { nome: string; municipios: { nome: string } | null } | null;
+  const municipio = zona.municipios as unknown as { nome: string } | null;
+  // A zona covers several bairros; list them from its seções.
+  const bairrosCobertos = [
+    ...new Set(
+      (secoes ?? [])
+        .map((s) => (s.bairros as unknown as { nome: string } | null)?.nome)
+        .filter(Boolean),
+    ),
+  ] as string[];
 
   return (
     <div className="flex flex-col gap-4">
@@ -38,7 +46,8 @@ export default async function ZonaDetailPage({
         <div>
           <h1 className="text-2xl font-semibold">Zona {zona.numero_zona}</h1>
           <p className="text-sm text-muted-foreground">
-            {bairro?.nome} — {bairro?.municipios?.nome}
+            {municipio?.nome}
+            {bairrosCobertos.length > 0 && ` — abrange ${bairrosCobertos.length} bairros`}
           </p>
         </div>
         <DeleteButton action={deleteZona.bind(null, id)} label="Excluir Zona" />
@@ -63,6 +72,7 @@ export default async function ZonaDetailPage({
             <TableHeader>
               <TableRow>
                 <TableHead>Seção</TableHead>
+                <TableHead>Bairro</TableHead>
                 <TableHead>Local de Votação</TableHead>
               </TableRow>
             </TableHeader>
@@ -74,12 +84,15 @@ export default async function ZonaDetailPage({
                       Seção {s.numero_secao}
                     </Link>
                   </TableCell>
+                  <TableCell>
+                    {(s.bairros as unknown as { nome: string } | null)?.nome ?? "—"}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{s.local_votacao ?? "—"}</TableCell>
                 </TableRow>
               ))}
               {(secoes ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={2} className="text-center text-muted-foreground">
+                  <TableCell colSpan={3} className="text-center text-muted-foreground">
                     Nenhuma seção cadastrada ainda.
                   </TableCell>
                 </TableRow>

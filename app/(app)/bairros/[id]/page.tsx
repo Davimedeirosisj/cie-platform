@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { deleteBairro } from "@/lib/actions/territorio";
 import { MetaEditor } from "@/components/territory/meta-editor";
 import { ObservacoesEditor } from "@/components/territory/observacoes-editor";
-import { CreateZonaDialog } from "@/components/territory/create-zona-dialog";
 import { EditBairroDialog } from "@/components/territory/edit-bairro-dialog";
 import { DeleteButton } from "@/components/territory/delete-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,11 +25,13 @@ export default async function BairroDetailPage({
 
   if (!bairro) notFound();
 
-  const { data: zonas } = await supabase
-    .from("zonas")
-    .select("id, numero_zona")
+  // Zonas are no longer children of a bairro (they span several), so list the
+  // bairro's own seções and show which zona each one belongs to.
+  const { data: secoes } = await supabase
+    .from("secoes")
+    .select("id, numero_secao, local_votacao, zonas(numero_zona)")
     .eq("bairro_id", id)
-    .order("numero_zona");
+    .order("numero_secao");
 
   const municipioNome = (bairro.municipios as unknown as { nome: string } | null)?.nome ?? "";
 
@@ -73,31 +74,36 @@ export default async function BairroDetailPage({
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Zonas Eleitorais</CardTitle>
-          <CreateZonaDialog bairroId={id} />
+        <CardHeader>
+          <CardTitle>Seções Eleitorais</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Seção</TableHead>
                 <TableHead>Zona</TableHead>
+                <TableHead>Local de Votação</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(zonas ?? []).map((z) => (
-                <TableRow key={z.id}>
+              {(secoes ?? []).map((s) => (
+                <TableRow key={s.id}>
                   <TableCell>
-                    <Link href={`/zonas/${z.id}`} className="font-medium underline-offset-4 hover:underline">
-                      Zona {z.numero_zona}
+                    <Link href={`/secoes/${s.id}`} className="font-medium underline-offset-4 hover:underline">
+                      Seção {s.numero_secao}
                     </Link>
                   </TableCell>
+                  <TableCell>
+                    Zona {(s.zonas as unknown as { numero_zona: number } | null)?.numero_zona ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{s.local_votacao ?? "—"}</TableCell>
                 </TableRow>
               ))}
-              {(zonas ?? []).length === 0 && (
+              {(secoes ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell className="text-center text-muted-foreground">
-                    Nenhuma zona cadastrada ainda.
+                  <TableCell colSpan={3} className="text-center text-muted-foreground">
+                    Nenhuma seção cadastrada ainda.
                   </TableCell>
                 </TableRow>
               )}

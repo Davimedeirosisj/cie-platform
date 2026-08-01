@@ -16,7 +16,9 @@ export default async function SecaoDetailPage({
 
   const { data: secao } = await supabase
     .from("secoes")
-    .select("id, numero_secao, local_votacao, endereco_local, zonas(numero_zona, bairros(nome, municipios(nome)))")
+    .select(
+      "id, numero_secao, local_votacao, endereco_local, bairros(nome), zonas(numero_zona, municipios(nome))",
+    )
     .eq("id", id)
     .single();
 
@@ -24,8 +26,9 @@ export default async function SecaoDetailPage({
 
   const zona = secao.zonas as unknown as {
     numero_zona: number;
-    bairros: { nome: string; municipios: { nome: string } | null } | null;
+    municipios: { nome: string } | null;
   } | null;
+  const bairro = secao.bairros as unknown as { nome: string } | null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -33,7 +36,7 @@ export default async function SecaoDetailPage({
         <div>
           <h1 className="text-2xl font-semibold">Seção {secao.numero_secao}</h1>
           <p className="text-sm text-muted-foreground">
-            Zona {zona?.numero_zona} — {zona?.bairros?.nome} — {zona?.bairros?.municipios?.nome}
+            Zona {zona?.numero_zona} — {bairro?.nome} — {zona?.municipios?.nome}
           </p>
         </div>
         <DeleteButton action={deleteSecao.bind(null, id)} label="Excluir Seção" />

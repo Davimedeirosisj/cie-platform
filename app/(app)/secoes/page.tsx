@@ -9,18 +9,15 @@ export default async function SecoesPage() {
   const [{ data: secoes }, { data: zonas }] = await Promise.all([
     supabase
       .from("secoes")
-      .select("id, numero_secao, local_votacao, zonas(numero_zona, bairros(nome, municipios(nome)))")
+      .select("id, numero_secao, local_votacao, bairros(nome), zonas(numero_zona, municipios(nome))")
       .order("numero_secao"),
-    supabase.from("zonas").select("id, numero_zona, bairros(nome, municipios(nome))").order("numero_zona"),
+    supabase.from("zonas").select("id, numero_zona, municipios(nome)").order("numero_zona"),
   ]);
 
-  const zonaOptions = (zonas ?? []).map((z) => {
-    const bairro = z.bairros as unknown as { nome: string; municipios: { nome: string } | null } | null;
-    return {
-      id: z.id,
-      label: `Zona ${z.numero_zona} — ${bairro?.nome ?? ""} (${bairro?.municipios?.nome ?? ""})`,
-    };
-  });
+  const zonaOptions = (zonas ?? []).map((z) => ({
+    id: z.id,
+    label: `Zona ${z.numero_zona} (${(z.municipios as unknown as { nome: string } | null)?.nome ?? ""})`,
+  }));
 
   return (
     <Card>
@@ -43,8 +40,9 @@ export default async function SecoesPage() {
             {(secoes ?? []).map((s) => {
               const zona = s.zonas as unknown as {
                 numero_zona: number;
-                bairros: { nome: string; municipios: { nome: string } | null } | null;
+                municipios: { nome: string } | null;
               } | null;
+              const bairro = s.bairros as unknown as { nome: string } | null;
               return (
                 <TableRow key={s.id}>
                   <TableCell>
@@ -53,8 +51,8 @@ export default async function SecoesPage() {
                     </Link>
                   </TableCell>
                   <TableCell>{zona ? `Zona ${zona.numero_zona}` : "—"}</TableCell>
-                  <TableCell>{zona?.bairros?.nome ?? "—"}</TableCell>
-                  <TableCell>{zona?.bairros?.municipios?.nome ?? "—"}</TableCell>
+                  <TableCell>{bairro?.nome ?? "—"}</TableCell>
+                  <TableCell>{zona?.municipios?.nome ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{s.local_votacao ?? "—"}</TableCell>
                 </TableRow>
               );

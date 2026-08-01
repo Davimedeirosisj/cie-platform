@@ -49,13 +49,16 @@ export const EditBairroSchema = CreateBairroSchema.extend({
   id: z.string().uuid("ID inválido"),
 });
 
+// z.coerce: these come from FormData, which is always strings -- a plain
+// z.number() rejected every submission from the create dialogs.
+// Zona hangs off the município: it spans many bairros (migration 0017).
 export const CreateZonaSchema = z.object({
-  numero_zona: z
+  numero_zona: z.coerce
     .number()
     .int("Número da zona deve ser um inteiro")
     .min(1, "Número da zona deve ser maior que 0")
     .max(9999, "Número da zona não pode exceder 9999"),
-  bairro_id: z.string().uuid("Bairro inválido"),
+  municipio_id: z.string().uuid("Município inválido"),
 });
 
 export const EditZonaSchema = CreateZonaSchema.extend({
@@ -63,7 +66,7 @@ export const EditZonaSchema = CreateZonaSchema.extend({
 });
 
 export const CreateSecaoSchema = z.object({
-  numero_secao: z
+  numero_secao: z.coerce
     .number()
     .int("Número da seção deve ser um inteiro")
     .min(1, "Número da seção deve ser maior que 0")

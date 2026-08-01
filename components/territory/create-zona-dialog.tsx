@@ -24,13 +24,17 @@ import {
 
 const initialState: FormActionState = { error: null };
 
+// A zona belongs to the município (it spans many bairros), so the parent
+// picked here is the município -- not a bairro, as in the original model.
 type CreateZonaDialogProps =
-  | { bairroId: string; bairros?: never }
-  | { bairroId?: never; bairros: { id: string; nome: string; municipioNome: string }[] };
+  | { municipioId: string; municipios?: never }
+  | { municipioId?: never; municipios: { id: string; nome: string }[] };
 
 export function CreateZonaDialog(props: CreateZonaDialogProps) {
   const [open, setOpen] = useState(false);
-  const [selectedBairro, setSelectedBairro] = useState<string | undefined>(props.bairroId);
+  const [selectedMunicipio, setSelectedMunicipio] = useState<string | undefined>(
+    props.municipioId,
+  );
   const [state, formAction, isPending] = useActionState(createZona, initialState);
   const prevPending = useRef(isPending);
 
@@ -45,27 +49,27 @@ export function CreateZonaDialog(props: CreateZonaDialogProps) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nova Zona Eleitoral</DialogTitle>
-          <DialogDescription>Cadastre uma zona eleitoral.</DialogDescription>
+          <DialogDescription>
+            Uma zona pertence ao município e pode abranger vários bairros.
+          </DialogDescription>
         </DialogHeader>
         <form action={formAction} className="flex flex-col gap-4">
-          <input type="hidden" name="bairro_id" value={selectedBairro ?? ""} />
-          {props.bairros && (
+          <input type="hidden" name="municipio_id" value={selectedMunicipio ?? ""} />
+          {props.municipios && (
             <div className="flex flex-col gap-2">
-              <Label>Bairro</Label>
+              <Label>Município</Label>
               <Select
-                items={Object.fromEntries(
-                  props.bairros.map((b) => [b.id, `${b.nome} (${b.municipioNome})`]),
-                )}
-                value={selectedBairro}
-                onValueChange={(value) => value && setSelectedBairro(value)}
+                items={Object.fromEntries(props.municipios.map((m) => [m.id, m.nome]))}
+                value={selectedMunicipio}
+                onValueChange={(value) => value && setSelectedMunicipio(value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o bairro" />
+                  <SelectValue placeholder="Selecione o município" />
                 </SelectTrigger>
                 <SelectContent>
-                  {props.bairros.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.nome} ({b.municipioNome})
+                  {props.municipios.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -78,7 +82,7 @@ export function CreateZonaDialog(props: CreateZonaDialogProps) {
           </div>
           {state.error && <p className="text-sm text-destructive">{state.error}</p>}
           <DialogFooter>
-            <Button type="submit" disabled={isPending || !selectedBairro}>
+            <Button type="submit" disabled={isPending || !selectedMunicipio}>
               {isPending ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
