@@ -16,6 +16,13 @@ export async function proxy(request: NextRequest) {
     "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com",
     "img-src 'self' data: https: blob:",
     "media-src 'self' blob:",
+    // Mapbox GL spawns its tile-decoding worker from a blob: URL. Without an
+    // explicit worker-src this falls back to default-src 'self', which blocks
+    // it -- and the failure is asynchronous, so the map simply stalls with
+    // isStyleLoaded() === false and paints a blank container, no error thrown.
+    // child-src is the legacy fallback for browsers that predate worker-src.
+    "worker-src 'self' blob:",
+    "child-src 'self' blob:",
     "connect-src 'self' https://*.supabase.co https://*.mapbox.com https://api.mapbox.com",
     "frame-src 'self'",
     "object-src 'none'",
