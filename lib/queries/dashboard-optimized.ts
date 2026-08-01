@@ -18,12 +18,16 @@ export type TopItem = {
   href: string;
 };
 
-// Mapeamento de nível para tabelas (mesmo do rankings-optimized)
+// `rota` is spelled out because the plural is not a suffix: "secao" -> /secoes,
+// so deriving it as `${nivel}s` produced dead /secaos/ links.
+// `prefixo` restores the wording for the levels identified by a number.
 const TOP_CONFIG: Record<MetaNivel, {
   rankingView: string;
   idColumn: string;
   dataTable: string;
   nameField: string;
+  rota: string;
+  prefixo?: string;
   parentJoin?: string;
 }> = {
   municipio: {
@@ -31,12 +35,14 @@ const TOP_CONFIG: Record<MetaNivel, {
     idColumn: "municipio_id",
     dataTable: "municipios",
     nameField: "nome",
+    rota: "municipios",
   },
   bairro: {
     rankingView: "vw_ranking_bairro",
     idColumn: "bairro_id",
     dataTable: "bairros",
     nameField: "nome",
+    rota: "bairros",
     parentJoin: "municipios(nome)",
   },
   zona: {
@@ -44,14 +50,19 @@ const TOP_CONFIG: Record<MetaNivel, {
     idColumn: "zona_id",
     dataTable: "zonas",
     nameField: "numero_zona",
-    parentJoin: "bairros(nome)",
+    rota: "zonas",
+    prefixo: "Zona ",
+    // A zona spans several bairros, so its parent is the município (0017).
+    parentJoin: "municipios(nome)",
   },
   secao: {
     rankingView: "vw_ranking_secao",
     idColumn: "secao_id",
     dataTable: "secoes",
     nameField: "numero_secao",
-    parentJoin: "zonas(numero_zona)",
+    rota: "secoes",
+    prefixo: "Seção ",
+    parentJoin: "bairros(nome)",
   },
 };
 
@@ -121,10 +132,10 @@ export async function fetchTop(
     const info = infoById.get(id);
     return {
       id,
-      label: info?.nome ?? "—",
+      label: info?.nome ? `${config.prefixo ?? ""}${info.nome}` : "—",
       sublabel: info?.parent,
       votos: r.total_votos as number,
-      href: `/${nivel}s/${id}`,
+      href: `/${config.rota}/${id}`,
     };
   });
 }

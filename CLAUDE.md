@@ -28,10 +28,28 @@ npm run lint     # Run ESLint
 
 ### Data Model
 
-The app manages a hierarchical territorial structure:
-- **Estado** (State) → **Municipio** (Municipality) → **Bairro** (Neighborhood) → **Zona** (Zone) → **Secao** (Section)
+Territory is **not** a single chain. Bairro and zona eleitoral are two
+*parallel* groupings of the same seções — a zona spans many bairros, so it
+hangs off the município, and each seção records both its zona and its bairro:
 
-Each campaign can set goals (**Metas**) at any level in this hierarchy.
+```
+Estado → Município ─┬─ Bairro ─┐
+                    └─ Zona ───┴─ Seção   (seção carries both FKs)
+```
+
+Modelling zona under bairro (as the original PRD wording implied) shattered
+each real zona into one row per bairro it touched — see migration 0017.
+
+**Votes** live in a single polymorphic `votos` table: a `nivel` plus exactly
+one territorial FK. Campaign files arrive at different granularities (some
+aggregated per bairro, some with full seção detail), and the same votes may
+appear in more than one file. Aggregation is therefore **"finest grain wins"**
+per território: if finer data exists inside a território it is used, otherwise
+the total recorded at that território itself is. Never `SUM` across levels —
+that double counts. See migrations 0014–0018.
+
+**Metas** are the opposite: independently settable at any level, since a goal
+is a planning decision rather than a roll-up.
 
 **Key Types** in `lib/types/`:
 - `Campanha` - Campaign metadata (name, status: planejamento|ativa|encerrada)
