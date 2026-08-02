@@ -202,13 +202,21 @@ export function HeatmapMap() {
     };
   }, [ready, camada, campanhas]);
 
+  // Named after the campaign actually flagged is_campanha_meta -- the layer
+  // reads its values from that campaign, so hardcoding "Meta 2026" would lie
+  // as soon as the flag moved.
+  const rotuloMeta = useMemo(() => {
+    const campanhaMeta = campanhas.find((c) => c.is_campanha_meta);
+    return campanhaMeta ? `Meta — ${campanhaMeta.nome}` : "Meta";
+  }, [campanhas]);
+
   // Base UI resolves the trigger label from this map, not from the items.
   const camadaItems = useMemo(
     () => ({
       ...Object.fromEntries(campanhas.map((c) => [c.id, c.nome])),
-      [META_OPTION]: "Meta 2026",
+      [META_OPTION]: rotuloMeta,
     }),
-    [campanhas],
+    [campanhas, rotuloMeta],
   );
 
   return (
@@ -224,7 +232,7 @@ export function HeatmapMap() {
                 {c.nome}
               </SelectItem>
             ))}
-            <SelectItem value={META_OPTION}>Meta 2026</SelectItem>
+            <SelectItem value={META_OPTION}>{rotuloMeta}</SelectItem>
           </SelectContent>
         </Select>
 

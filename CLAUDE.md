@@ -134,6 +134,13 @@ stores/
 3. **Campaign Context** - Passed through sidebar layout
    - Selected campaign ID stored in Zustand (`useCampaignStore`)
    - Most pages require active campaign selection
+   - **The toolbar campaign is a *view* filter, never a write target and never
+     where metas live.** Goals belong to the campaign flagged `is_campanha_meta`
+     — read them via `fetchCampanhaMeta()` (`lib/queries/campanha-meta.ts`) and
+     show that campaign's name on screen instead of hardcoding "2026". Confusing
+     the two has caused four separate bugs: imports landing on the wrong
+     campaign, metas saved where nothing reads them, and Rankings/Relatórios
+     showing "—" for goals that existed.
 
 4. **Territory Hierarchy** - All mutations cascade through parent-child relationships
    - Creating a Secao requires Zona ID → Bairro ID → Municipio ID → Estado ID

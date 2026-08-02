@@ -1,6 +1,10 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+// Placeholders show Fortaleza. They were Salvador (-12.9711, -38.5108), left
+// over from when the plan targeted Bahia -- close enough in longitude to look
+// plausible while pointing 1.000 km south of the state this campaign runs in.
+
 export function CoordinateFields({
   latitudeDefault,
   longitudeDefault,
@@ -19,7 +23,7 @@ export function CoordinateFields({
           step="any"
           min={-90}
           max={90}
-          placeholder="-12.9711"
+          placeholder="-3.7319"
           defaultValue={latitudeDefault ?? ""}
         />
       </div>

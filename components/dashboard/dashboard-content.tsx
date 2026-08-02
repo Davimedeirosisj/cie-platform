@@ -67,11 +67,15 @@ export function DashboardContent({ counts }: { counts: Counts }) {
     fetchTotalVotosPorCampanha().then(setTotaisPorCampanha);
   }, []);
 
+  const campanhaMeta = useMemo(
+    () => campanhas.find((c) => c.is_campanha_meta) ?? null,
+    [campanhas]
+  );
+
   useEffect(() => {
-    const campanhaMeta = campanhas.find((c) => c.is_campanha_meta);
     if (!campanhaMeta) return;
     fetchMetaTotalMunicipio(campanhaMeta.id).then(setMetaTotal);
-  }, [campanhas]);
+  }, [campanhaMeta]);
 
 
   useEffect(() => {
@@ -79,9 +83,14 @@ export function DashboardContent({ counts }: { counts: Counts }) {
     fetchComparacao(nivelComparacao, campanhaA, campanhaB).then(setComparacao);
   }, [nivelComparacao, campanhaA, campanhaB]);
 
-  const totalSelecionada = campanhaId ? totaisPorCampanha[campanhaId] ?? 0 : 0;
+  // Progress is measured against the meta campaign's *own* votes, not the
+  // toolbar's. Using the selected campaign showed "117% atingido" for a 2026
+  // goal because 2022 was selected -- the goal read as beaten while the 2026
+  // campaign had zero votes. Same confusion of view filter and target that hit
+  // the import wizard and the meta editor.
+  const totalCampanhaMeta = campanhaMeta ? totaisPorCampanha[campanhaMeta.id] ?? 0 : 0;
   const percentualMeta =
-    metaTotal && metaTotal > 0 ? Math.round((totalSelecionada / metaTotal) * 100) : null;
+    metaTotal && metaTotal > 0 ? Math.round((totalCampanhaMeta / metaTotal) * 100) : null;
 
   const handleCampanhaAChange = useCallback((v: string | null) => {
     if (v) setCampanhaA(v);
@@ -91,9 +100,14 @@ export function DashboardContent({ counts }: { counts: Counts }) {
     if (v) setCampanhaB(v);
   }, []);
 
+  // Filter to actual growth, mirroring maioresQuedas. Without this, comparing
+  // two campaigns where nothing grew (2022 federal vs 2024 vereadora) listed
+  // the least-bad losses -- "-1, -100%" -- under the heading "Maior
+  // crescimento", which reads as growth.
   const maioresCrescimentos = useMemo(
     () =>
       [...comparacao]
+        .filter((r) => r.variacao_absoluta > 0)
         .sort((a, b) => b.variacao_absoluta - a.variacao_absoluta)
         .slice(0, 5),
     [comparacao]
@@ -128,9 +142,13 @@ export function DashboardContent({ counts }: { counts: Counts }) {
           />
         ))}
         <KpiCard
-          label="Meta Total 2026"
+          label={campanhaMeta ? `Meta Total — ${campanhaMeta.nome}` : "Meta Total"}
           value={metaTotal !== null ? metaTotal.toLocaleString("pt-BR") : "—"}
-          hint={percentualMeta !== null ? `${percentualMeta}% atingido pela campanha selecionada` : undefined}
+          hint={
+            percentualMeta !== null && campanhaMeta
+              ? `${percentualMeta}% atingido por ${campanhaMeta.nome}`
+              : undefined
+          }
         />
       </div>
 
@@ -215,11 +233,19 @@ export function DashboardContent({ counts }: { counts: Counts }) {
           <div className="grid gap-4 lg:grid-cols-2">
             <div>
               <h3 className="mb-2 text-sm font-medium">Maior crescimento</h3>
-              <ComparacaoTable rows={maioresCrescimentos} rotulo={rotuloTerritorio} />
+              <ComparacaoTable
+                rows={maioresCrescimentos}
+                rotulo={rotuloTerritorio}
+                vazio="Nenhum território cresceu entre as duas campanhas."
+              />
             </div>
             <div>
               <h3 className="mb-2 text-sm font-medium">Maior queda</h3>
-              <ComparacaoTable rows={maioresQuedas} rotulo={rotuloTerritorio} />
+              <ComparacaoTable
+                rows={maioresQuedas}
+                rotulo={rotuloTerritorio}
+                vazio="Nenhum território caiu entre as duas campanhas."
+              />
             </div>
           </div>
         </CardContent>
@@ -231,12 +257,14 @@ export function DashboardContent({ counts }: { counts: Counts }) {
 const ComparacaoTable = memo(function ComparacaoTableComponent({
   rows,
   rotulo,
+  vazio,
 }: {
   rows: (ComparacaoRow & { nome: string })[];
   rotulo: string;
+  vazio: string;
 }) {
   if (rows.length === 0) {
-    return <p className="text-sm text-muted-foreground">Sem dados.</p>;
+    return <p className="text-sm text-muted-foreground">{vazio}</p>;
   }
   return (
     <Table>

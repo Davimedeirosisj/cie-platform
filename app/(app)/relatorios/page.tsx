@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useCampaignStore } from "@/stores/campaign-store";
 import type { MetaNivel } from "@/lib/types/territorio";
 import { RANKING_FETCHERS, type RankingRow } from "@/lib/queries/rankings";
+import { fetchCampanhaMeta } from "@/lib/queries/campanha-meta";
 import { downloadCsv } from "@/lib/reports/export-csv";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -30,20 +31,31 @@ export default function RelatoriosPage() {
   const [nivel, setNivel] = useState<MetaNivel>("municipio");
   const [filtro, setFiltro] = useState("");
   const [rows, setRows] = useState<RankingRow[] | null>(null);
+  const [nomeCampanhaMeta, setNomeCampanhaMeta] = useState<string | null>(null);
 
   useEffect(() => {
     if (!campanhaId) return;
     let cancelled = false;
     async function load() {
       setRows(null);
-      const data = await RANKING_FETCHERS[nivel](campanhaId!);
-      if (!cancelled) setRows(data);
+      const [data, campanhaMeta] = await Promise.all([
+        RANKING_FETCHERS[nivel](campanhaId!),
+        fetchCampanhaMeta(),
+      ]);
+      if (cancelled) return;
+      setRows(data);
+      setNomeCampanhaMeta(campanhaMeta?.nome ?? null);
     }
     load();
     return () => {
       cancelled = true;
     };
   }, [nivel, campanhaId]);
+
+  // The report is exported and printed, so the column has to say which
+  // campaign the goal belongs to -- "Meta 2026" was hardcoded and would have
+  // gone on paper unchanged after the meta campaign moved on.
+  const rotuloMeta = nomeCampanhaMeta ? `Meta — ${nomeCampanhaMeta}` : "Meta";
 
   const filteredRows = useMemo(() => {
     if (!rows) return [];
@@ -60,7 +72,7 @@ export default function RelatoriosPage() {
   function handleExportCsv() {
     downloadCsv(
       `relatorio-${nivel}-${new Date().toISOString().slice(0, 10)}.csv`,
-      ["Ranking", "Território", "Votos", "Meta 2026"],
+      ["Ranking", "Território", "Votos", rotuloMeta],
       filteredRows.map((r) => [r.ranking, r.label, r.votos, r.meta ?? ""]),
     );
   }
@@ -133,7 +145,7 @@ export default function RelatoriosPage() {
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Território</TableHead>
                   <TableHead className="text-right">Votos</TableHead>
-                  <TableHead className="text-right">Meta 2026</TableHead>
+                  <TableHead className="text-right">{rotuloMeta}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
