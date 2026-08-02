@@ -7,7 +7,8 @@ import type { Campanha } from "@/lib/types/campanha";
 import {
   fetchTotalVotosPorCampanha,
   fetchMetaTotalMunicipio,
-  fetchComparacaoMunicipios,
+  fetchComparacao,
+  type ComparacaoNivel,
   type ComparacaoRow,
 } from "@/lib/queries/dashboard";
 import { useTopItems } from "@/lib/hooks";
@@ -26,6 +27,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 type Counts = { municipios: number; bairros: number; zonas: number; secoes: number };
 
+// Base UI reads the trigger label from this map.
+const NIVEIS_COMPARACAO: Record<string, string> = {
+  municipio: "Municípios",
+  bairro: "Bairros de Fortaleza",
+};
+
 export function DashboardContent({ counts }: { counts: Counts }) {
   const campanhaId = useCampaignStore((s) => s.selectedCampanhaId);
 
@@ -38,6 +45,7 @@ export function DashboardContent({ counts }: { counts: Counts }) {
 
   const [campanhaA, setCampanhaA] = useState<string>("");
   const [campanhaB, setCampanhaB] = useState<string>("");
+  const [nivelComparacao, setNivelComparacao] = useState<ComparacaoNivel>("municipio");
   const [comparacao, setComparacao] = useState<(ComparacaoRow & { nome: string })[]>([]);
 
   useEffect(() => {
@@ -67,8 +75,8 @@ export function DashboardContent({ counts }: { counts: Counts }) {
 
   useEffect(() => {
     if (!campanhaA || !campanhaB) return;
-    fetchComparacaoMunicipios(campanhaA, campanhaB).then(setComparacao);
-  }, [campanhaA, campanhaB]);
+    fetchComparacao(nivelComparacao, campanhaA, campanhaB).then(setComparacao);
+  }, [nivelComparacao, campanhaA, campanhaB]);
 
   const totalSelecionada = campanhaId ? totaisPorCampanha[campanhaId] ?? 0 : 0;
   const percentualMeta =
@@ -98,6 +106,8 @@ export function DashboardContent({ counts }: { counts: Counts }) {
         .slice(0, 5),
     [comparacao]
   );
+
+  const rotuloTerritorio = nivelComparacao === "bairro" ? "Bairro" : "Município";
 
   // Base UI needs an items map to render labels (not raw ids) in the trigger.
   const campanhaItems = useMemo(
@@ -150,10 +160,29 @@ export function DashboardContent({ counts }: { counts: Counts }) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Comparativo entre campanhas (municípios)</CardTitle>
+          <CardTitle className="text-base">
+            Comparativo entre campanhas{" "}
+            {nivelComparacao === "bairro" ? "(bairros de Fortaleza)" : "(municípios)"}
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-4">
+            <Select
+              items={NIVEIS_COMPARACAO}
+              value={nivelComparacao}
+              onValueChange={(v) => v && setNivelComparacao(v as ComparacaoNivel)}
+            >
+              <SelectTrigger className="w-56">
+                <SelectValue placeholder="Nível" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(NIVEIS_COMPARACAO).map(([valor, rotulo]) => (
+                  <SelectItem key={valor} value={valor}>
+                    {rotulo}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select items={campanhaItems} value={campanhaA} onValueChange={handleCampanhaAChange}>
               <SelectTrigger className="w-56">
                 <SelectValue placeholder="Campanha A" />
@@ -183,11 +212,11 @@ export function DashboardContent({ counts }: { counts: Counts }) {
           <div className="grid gap-4 lg:grid-cols-2">
             <div>
               <h3 className="mb-2 text-sm font-medium">Maior crescimento</h3>
-              <ComparacaoTable rows={maioresCrescimentos} />
+              <ComparacaoTable rows={maioresCrescimentos} rotulo={rotuloTerritorio} />
             </div>
             <div>
               <h3 className="mb-2 text-sm font-medium">Maior queda</h3>
-              <ComparacaoTable rows={maioresQuedas} />
+              <ComparacaoTable rows={maioresQuedas} rotulo={rotuloTerritorio} />
             </div>
           </div>
         </CardContent>
@@ -198,8 +227,10 @@ export function DashboardContent({ counts }: { counts: Counts }) {
 
 const ComparacaoTable = memo(function ComparacaoTableComponent({
   rows,
+  rotulo,
 }: {
   rows: (ComparacaoRow & { nome: string })[];
+  rotulo: string;
 }) {
   if (rows.length === 0) {
     return <p className="text-sm text-muted-foreground">Sem dados.</p>;
@@ -208,7 +239,7 @@ const ComparacaoTable = memo(function ComparacaoTableComponent({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Município</TableHead>
+          <TableHead>{rotulo}</TableHead>
           <TableHead className="text-right">Variação</TableHead>
           <TableHead className="text-right">%</TableHead>
         </TableRow>

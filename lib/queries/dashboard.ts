@@ -33,22 +33,51 @@ export type ComparacaoRow = {
   variacao_percentual: number | null;
 };
 
-export async function fetchComparacaoMunicipios(
+export type ComparacaoNivel = "municipio" | "bairro";
+
+/**
+ * Bairro comparison is scoped to Fortaleza on purpose. It is the município the
+ * campaign holds bairro-level results for, and ranking all 1.197 bairros from
+ * 166 municípios together would compare territories that never contested the
+ * same race.
+ */
+const MUNICIPIO_DOS_BAIRROS = "FORTALEZA";
+
+export async function fetchComparacao(
+  nivel: ComparacaoNivel,
   campanhaAId: string,
   campanhaBId: string,
 ): Promise<(ComparacaoRow & { nome: string })[]> {
   const supabase = createClient();
-  const { data } = await supabase.rpc("fn_comparar_campanhas", {
-    p_nivel: "municipio",
+  const { data, error } = await supabase.rpc("fn_comparar_campanhas", {
+    p_nivel: nivel,
     p_campanha_a: campanhaAId,
     p_campanha_b: campanhaBId,
   });
+  if (error) console.error(`[fetchComparacao:${nivel}]`, error.message);
+
   const rows = (data ?? []) as ComparacaoRow[];
   if (rows.length === 0) return [];
 
-  const ids = rows.map((r) => r.territorio_id);
-  const { data: municipios } = await supabase.from("municipios").select("id, nome").in("id", ids);
-  const nomeById = new Map((municipios ?? []).map((m) => [m.id, m.nome]));
+  if (nivel === "municipio") {
+    const ids = rows.map((r) => r.territorio_id);
+    const { data: municipios } = await supabase.from("municipios").select("id, nome").in("id", ids);
+    const nomeById = new Map((municipios ?? []).map((m) => [m.id, m.nome]));
+    return rows.map((r) => ({ ...r, nome: nomeById.get(r.territorio_id) ?? "—" }));
+  }
 
-  return rows.map((r) => ({ ...r, nome: nomeById.get(r.territorio_id) ?? "—" }));
+  // Fetching Fortaleza's bairros (rather than looking up every id the RPC
+  // returned) is also what restricts the result to them.
+  const { data: bairros } = await supabase
+    .from("bairros")
+    .select("id, nome, municipios!inner(nome)")
+    .eq("municipios.nome", MUNICIPIO_DOS_BAIRROS);
+
+  const nomeById = new Map(
+    ((bairros ?? []) as unknown as { id: string; nome: string }[]).map((b) => [b.id, b.nome]),
+  );
+
+  return rows
+    .filter((r) => nomeById.has(r.territorio_id))
+    .map((r) => ({ ...r, nome: nomeById.get(r.territorio_id)! }));
 }
