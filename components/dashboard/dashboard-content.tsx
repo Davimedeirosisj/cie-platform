@@ -14,6 +14,7 @@ import {
 import { useTopItems } from "@/lib/hooks";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { TopList } from "@/components/dashboard/top-list";
+import { AnalisePanel } from "@/components/dashboard/analise-panel";
 import { VotesBarChart } from "@/components/dashboard/votes-bar-chart";
 import {
   Select,
@@ -155,6 +156,8 @@ export function DashboardContent({ counts }: { counts: Counts }) {
             <TopList title="Top Zonas" items={topItems.zonas} isLoading={isLoadingTopItems} />
             <TopList title="Top Seções" items={topItems.secoes} isLoading={isLoadingTopItems} />
           </div>
+
+          <AnalisePanel campanhaId={campanhaId} />
         </>
       )}
 
