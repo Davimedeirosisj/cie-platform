@@ -58,7 +58,8 @@ export const CreateZonaSchema = z.object({
     .int("Número da zona deve ser um inteiro")
     .min(1, "Número da zona deve ser maior que 0")
     .max(9999, "Número da zona não pode exceder 9999"),
-  municipio_id: z.string().uuid("Município inválido"),
+  // No parent id: a zona is scoped to the estado (0024), which the action
+  // resolves server-side rather than trusting the form.
 });
 
 export const EditZonaSchema = CreateZonaSchema.extend({

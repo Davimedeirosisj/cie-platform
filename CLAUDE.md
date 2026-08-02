@@ -29,16 +29,21 @@ npm run lint     # Run ESLint
 ### Data Model
 
 Territory is **not** a single chain. Bairro and zona eleitoral are two
-*parallel* groupings of the same seções — a zona spans many bairros, so it
-hangs off the município, and each seção records both its zona and its bairro:
+*parallel* groupings of the same seções, and they hang off different parents:
 
 ```
-Estado → Município ─┬─ Bairro ─┐
-                    └─ Zona ───┴─ Seção   (seção carries both FKs)
+Estado ─┬─ Município ── Bairro ─┐
+        └─ Zona ────────────────┴─ Seção   (seção carries both FKs)
 ```
 
-Modelling zona under bairro (as the original PRD wording implied) shattered
-each real zona into one row per bairro it touched — see migration 0017.
+A **zona eleitoral is scoped to the estado**: TSE numbers them uniquely per UF
+and one zona serves several municípios in the interior (Zona 5 covers Baturité,
+Guaramiranga, Mulungu and Pacoti). A **bairro** belongs to a município.
+
+Getting either parent wrong shatters each real zona into one row per child it
+touches, which fragments zona rankings. This was fixed twice: zona under bairro
+(0017) and then zona under município (0024). A zona's municípios and bairros are
+**derived from its seções** — never stored on the zona.
 
 **Votes** live in a single polymorphic `votos` table: a `nivel` plus exactly
 one territorial FK. Campaign files arrive at different granularities (some

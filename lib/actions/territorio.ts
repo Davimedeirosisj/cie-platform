@@ -243,7 +243,23 @@ export async function createZona(
       const validated = validateInput(CreateZonaSchema, formDataObj);
 
       const supabase = await createClient();
-      const { error } = await supabase.from("zonas").insert(validated);
+
+      // Zona numbers are unique per estado (0024), so the estado is resolved
+      // here rather than taken from the form.
+      const { data: estado, error: estadoError } = await supabase
+        .from("estados")
+        .select("id")
+        .limit(1)
+        .single();
+
+      if (estadoError || !estado) {
+        console.error(`[${user.id}] Nenhum estado cadastrado`, estadoError);
+        return { error: "Nenhum estado cadastrado." };
+      }
+
+      const { error } = await supabase
+        .from("zonas")
+        .insert({ ...validated, estado_id: estado.id });
 
       if (error) {
         console.error(`[${user.id}] Erro ao criar zona:`, error);

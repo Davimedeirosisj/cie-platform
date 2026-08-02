@@ -23,15 +23,22 @@ export type Bairro = {
   observacoes: string | null;
 };
 
+/**
+ * A zona eleitoral is scoped to the estado, not to a município or bairro: TSE
+ * numbers them uniquely per UF and one zona can serve several municípios. The
+ * municípios and bairros it covers are derived from its seções (0024).
+ */
 export type Zona = {
   id: string;
-  bairro_id: string;
+  estado_id: string;
   numero_zona: number;
 };
 
+/** A seção sits in both groupings at once: a zona and a bairro. */
 export type Secao = {
   id: string;
   zona_id: string;
+  bairro_id: string | null;
   numero_secao: number;
   local_votacao: string | null;
   endereco_local: string | null;

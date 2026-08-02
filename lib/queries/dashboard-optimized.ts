@@ -52,8 +52,8 @@ const TOP_CONFIG: Record<MetaNivel, {
     nameField: "numero_zona",
     rota: "zonas",
     prefixo: "Zona ",
-    // A zona spans several bairros, so its parent is the município (0017).
-    parentJoin: "municipios(nome)",
+    // A zona has no parent território to show: it is scoped to the estado and
+    // can serve several municípios (0024), so the label stands on its own.
   },
   secao: {
     rankingView: "vw_ranking_secao",

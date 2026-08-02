@@ -6,49 +6,60 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 export default async function ZonasPage() {
   const supabase = await createClient();
-  // A zona spans several bairros, so it hangs off the município and the
-  // bairros it covers are derived from its seções.
-  const [{ data: zonas }, { data: municipios }] = await Promise.all([
-    supabase
-      .from("zonas")
-      .select("id, numero_zona, municipios(nome), secoes(bairros(nome))")
-      .order("numero_zona"),
-    supabase.from("municipios").select("id, nome").order("nome"),
-  ]);
+  // A zona is a statewide jurisdiction that can serve several municípios
+  // (0024), so both the municípios and the bairros it covers are derived from
+  // its seções rather than stored on the zona itself.
+  const { data: zonas } = await supabase
+    .from("zonas")
+    .select("id, numero_zona, secoes(bairros(nome, municipios(nome)))")
+    .order("numero_zona");
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Zonas Eleitorais</CardTitle>
-        <CreateZonaDialog municipios={municipios ?? []} />
+        <CreateZonaDialog />
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Zona</TableHead>
-              <TableHead>Município</TableHead>
+              <TableHead>Municípios atendidos</TableHead>
               <TableHead>Bairros abrangidos</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {(zonas ?? []).map((z) => {
-              const municipio = z.municipios as unknown as { nome: string } | null;
-              const secoes = (z.secoes ?? []) as unknown as { bairros: { nome: string } | null }[];
-              const bairrosUnicos = [
+              const secoes = (z.secoes ?? []) as unknown as {
+                bairros: { nome: string; municipios: { nome: string } | null } | null;
+              }[];
+              const municipios = [
+                ...new Set(secoes.map((s) => s.bairros?.municipios?.nome).filter(Boolean)),
+              ] as string[];
+              const bairros = [
                 ...new Set(secoes.map((s) => s.bairros?.nome).filter(Boolean)),
               ] as string[];
 
               return (
                 <TableRow key={z.id}>
                   <TableCell>
-                    <Link href={`/zonas/${z.id}`} className="font-medium underline-offset-4 hover:underline">
+                    <Link
+                      href={`/zonas/${z.id}`}
+                      className="font-medium underline-offset-4 hover:underline"
+                    >
                       Zona {z.numero_zona}
                     </Link>
                   </TableCell>
-                  <TableCell>{municipio?.nome ?? "—"}</TableCell>
+                  <TableCell>
+                    {municipios.length === 0
+                      ? "—"
+                      : municipios.length <= 2
+                        ? municipios.sort().join(", ")
+                        : `${municipios.length} municípios`}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {bairrosUnicos.length > 0 ? `${bairrosUnicos.length} bairros` : "—"}
+                    {bairros.length > 0 ? `${bairros.length} bairros` : "—"}
                   </TableCell>
                 </TableRow>
               );

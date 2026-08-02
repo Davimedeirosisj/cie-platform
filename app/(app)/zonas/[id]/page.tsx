@@ -18,7 +18,7 @@ export default async function ZonaDetailPage({
 
   const { data: zona } = await supabase
     .from("zonas")
-    .select("id, numero_zona, municipios(nome)")
+    .select("id, numero_zona")
     .eq("id", id)
     .single();
 
@@ -26,18 +26,23 @@ export default async function ZonaDetailPage({
 
   const { data: secoes } = await supabase
     .from("secoes")
-    .select("id, numero_secao, local_votacao, bairros(nome)")
+    .select("id, numero_secao, local_votacao, bairros(nome, municipios(nome))")
     .eq("zona_id", id)
     .order("numero_secao");
 
-  const municipio = zona.municipios as unknown as { nome: string } | null;
-  // A zona covers several bairros; list them from its seções.
-  const bairrosCobertos = [
+  type SecaoRow = {
+    bairros: { nome: string; municipios: { nome: string } | null } | null;
+  };
+
+  // A zona has no single parent (0024): both the municípios it serves and the
+  // bairros it covers are derived from its seções.
+  const municipiosAtendidos = [
     ...new Set(
-      (secoes ?? [])
-        .map((s) => (s.bairros as unknown as { nome: string } | null)?.nome)
-        .filter(Boolean),
+      (secoes ?? []).map((s) => (s as unknown as SecaoRow).bairros?.municipios?.nome).filter(Boolean),
     ),
+  ].sort() as string[];
+  const bairrosCobertos = [
+    ...new Set((secoes ?? []).map((s) => (s as unknown as SecaoRow).bairros?.nome).filter(Boolean)),
   ] as string[];
 
   return (
@@ -46,7 +51,9 @@ export default async function ZonaDetailPage({
         <div>
           <h1 className="text-2xl font-semibold">Zona {zona.numero_zona}</h1>
           <p className="text-sm text-muted-foreground">
-            {municipio?.nome}
+            {municipiosAtendidos.length > 0
+              ? municipiosAtendidos.join(", ")
+              : "Nenhum município atendido ainda"}
             {bairrosCobertos.length > 0 && ` — abrange ${bairrosCobertos.length} bairros`}
           </p>
         </div>
