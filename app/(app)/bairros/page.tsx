@@ -6,18 +6,34 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 export default async function BairrosPage() {
   const supabase = await createClient();
-  const [{ data: bairros }, { data: municipios }] = await Promise.all([
+  // Same silent truncation as /secoes: PostgREST caps at 1.000 rows and the
+  // page has grown past that, so the limit is stated rather than hidden.
+  const LIMITE = 500;
+  const [{ data: bairros, count }, { data: municipios }] = await Promise.all([
     supabase
       .from("bairros")
-      .select("id, nome, observacoes, municipios(nome)")
-      .order("nome"),
+      .select("id, nome, observacoes, municipios(nome)", { count: "exact" })
+      .order("nome")
+      .limit(LIMITE),
     supabase.from("municipios").select("id, nome").order("nome"),
   ]);
 
+  const total = count ?? 0;
+  const truncado = total > (bairros?.length ?? 0);
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Bairros</CardTitle>
+      <CardHeader className="flex flex-row items-start justify-between">
+        <div>
+          <CardTitle>Bairros</CardTitle>
+          {truncado && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Mostrando {(bairros?.length ?? 0).toLocaleString("pt-BR")} de{" "}
+              {total.toLocaleString("pt-BR")}. Use a Pesquisa Global ou os Relatórios para
+              localizar um bairro específico.
+            </p>
+          )}
+        </div>
         <CreateBairroDialog municipios={municipios ?? []} />
       </CardHeader>
       <CardContent>

@@ -9,15 +9,24 @@ export default async function SecoesPage() {
   // A seção's município comes from its bairro: the zona is a statewide
   // jurisdiction that can serve several municípios (0024), so it can no
   // longer answer "which município is this seção in?".
-  const [{ data: secoes }, { data: zonas }] = await Promise.all([
+  // PostgREST caps a response at 1.000 rows, so with ~9.000 seções this page
+  // was silently showing a slice as if it were everything. The count is
+  // fetched alongside so the limit can be stated instead of hidden.
+  const LIMITE = 500;
+  const [{ data: secoes, count }, { data: zonas }] = await Promise.all([
     supabase
       .from("secoes")
       .select(
         "id, numero_secao, local_votacao, bairros(nome, municipios(nome)), zonas(numero_zona)",
+        { count: "exact" },
       )
-      .order("numero_secao"),
+      .order("numero_secao")
+      .limit(LIMITE),
     supabase.from("zonas").select("id, numero_zona").order("numero_zona"),
   ]);
+
+  const total = count ?? 0;
+  const truncado = total > (secoes?.length ?? 0);
 
   const zonaOptions = (zonas ?? []).map((z) => ({
     id: z.id,
@@ -26,8 +35,17 @@ export default async function SecoesPage() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Seções Eleitorais</CardTitle>
+      <CardHeader className="flex flex-row items-start justify-between">
+        <div>
+          <CardTitle>Seções Eleitorais</CardTitle>
+          {truncado && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Mostrando {(secoes?.length ?? 0).toLocaleString("pt-BR")} de{" "}
+              {total.toLocaleString("pt-BR")}. Use a Pesquisa Global ou os Relatórios para
+              localizar uma seção específica.
+            </p>
+          )}
+        </div>
         <CreateSecaoDialog zonas={zonaOptions} />
       </CardHeader>
       <CardContent>
