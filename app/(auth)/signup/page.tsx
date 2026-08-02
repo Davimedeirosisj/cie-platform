@@ -9,11 +9,27 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+/**
+ * This gate has to be decided per request, never at build time.
+ *
+ * Without it Next.js prerendered /signup as a static page, so
+ * fn_super_admin_exists() ran once during `npm run build` and the answer was
+ * baked into HTML. In production the build could not reach Supabase, the RPC
+ * returned nothing, `superAdminExists` came out falsy, and the *open* signup
+ * form was served to everyone -- long after the super_admin existed.
+ *
+ * The signUp action re-checks, so no account could actually be created, but a
+ * security gate must not be frozen at build time in either direction.
+ */
+export const dynamic = "force-dynamic";
+
 export default async function SignupPage() {
   const supabase = await createClient();
-  const { data: superAdminExists } = await supabase.rpc("fn_super_admin_exists");
+  const { data: superAdminExists, error } = await supabase.rpc("fn_super_admin_exists");
 
-  if (superAdminExists) {
+  // Fail closed. If the check itself fails we cannot prove signup is still
+  // open, and guessing "open" is the one wrong answer that matters.
+  if (superAdminExists || error) {
     return (
       <Card>
         <CardHeader>
