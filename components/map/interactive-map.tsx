@@ -6,7 +6,12 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { createClient } from "@/lib/supabase/client";
 import { useCampaignStore } from "@/stores/campaign-store";
-import { MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM, MAP_MUNICIPIO_ZOOM } from "@/lib/map/config";
+import {
+  MAP_DEFAULT_CENTER,
+  MAP_DEFAULT_ZOOM,
+  MAP_MUNICIPIO_ZOOM,
+  MAP_SECAO_ZOOM,
+} from "@/lib/map/config";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -17,8 +22,30 @@ import {
 } from "@/components/ui/sheet";
 import { MetaEditor } from "@/components/territory/meta-editor";
 
-type GeoPoint = { id: string; nome: string; latitude: number; longitude: number; votos: number };
-type PanelState = { nivel: "municipio" | "bairro"; id: string; nome: string; votos: number } | null;
+type Nivel = "municipio" | "bairro" | "secao";
+type GeoPoint = {
+  id: string;
+  nome: string;
+  latitude: number;
+  longitude: number;
+  votos: number;
+  sublabel?: string;
+};
+type PanelState = {
+  nivel: Nivel;
+  id: string;
+  nome: string;
+  votos: number;
+  sublabel?: string;
+} | null;
+
+// Seções are the level campaign work actually happens at, so they get their
+// own colour and a smaller dot -- a bairro can hold dozens of them.
+const ESTILO_MARCADOR: Record<Nivel, { cor: string; tamanho: string }> = {
+  municipio: { cor: "#2563eb", tamanho: "14px" },
+  bairro: { cor: "#16a34a", tamanho: "14px" },
+  secao: { cor: "#ea580c", tamanho: "10px" },
+};
 
 export function InteractiveMap() {
   const campanhaId = useCampaignStore((s) => s.selectedCampanhaId);
@@ -26,8 +53,9 @@ export function InteractiveMap() {
   const map = useRef<mapboxgl.Map | null>(null);
   const markers = useRef<mapboxgl.Marker[]>([]);
 
-  const [nivel, setNivel] = useState<"municipio" | "bairro">("municipio");
+  const [nivel, setNivel] = useState<Nivel>("municipio");
   const [municipioAtual, setMunicipioAtual] = useState<{ id: string; nome: string } | null>(null);
+  const [bairroAtual, setBairroAtual] = useState<{ id: string; nome: string } | null>(null);
   const [panel, setPanel] = useState<PanelState>(null);
   // Root of the drill-down breadcrumb: read from the DB rather than hardcoded,
   // so changing the estado doesn't leave a stale name on the map.
@@ -97,6 +125,34 @@ export function InteractiveMap() {
           longitude: m.longitude!,
           votos: votosById.get(m.id) ?? 0,
         }));
+      } else if (nivel === "secao" && bairroAtual) {
+        // Seções carry TSE's own polling-place coordinates, so this level is
+        // the one that says where to physically send people.
+        const [{ data: secoes }, { data: votos }] = await Promise.all([
+          supabase
+            .from("secoes")
+            .select("id, numero_secao, local_votacao, latitude, longitude")
+            .eq("bairro_id", bairroAtual.id)
+            .not("latitude", "is", null)
+            .not("longitude", "is", null)
+            .order("numero_secao"),
+          supabase
+            .from("votos")
+            .select("secao_id, quantidade_votos")
+            .eq("campanha_id", campanhaId!)
+            .eq("nivel", "secao"),
+        ]);
+        const votosById = new Map(
+          (votos ?? []).map((v) => [v.secao_id, v.quantidade_votos]),
+        );
+        pontos = (secoes ?? []).map((s) => ({
+          id: s.id,
+          nome: `Seção ${s.numero_secao}`,
+          sublabel: s.local_votacao ?? undefined,
+          latitude: s.latitude!,
+          longitude: s.longitude!,
+          votos: votosById.get(s.id) ?? 0,
+        }));
       } else if (municipioAtual) {
         const [{ data: bairros }, { data: votos }] = await Promise.all([
           supabase
@@ -126,19 +182,30 @@ export function InteractiveMap() {
       markers.current = [];
 
       for (const ponto of pontos) {
+        const estilo = ESTILO_MARCADOR[nivel];
         const el = document.createElement("button");
         el.setAttribute("aria-label", ponto.nome);
-        el.style.width = "14px";
-        el.style.height = "14px";
+        el.title = ponto.sublabel ? `${ponto.nome} - ${ponto.sublabel}` : ponto.nome;
+        el.style.width = estilo.tamanho;
+        el.style.height = estilo.tamanho;
         el.style.borderRadius = "50%";
         el.style.border = "2px solid white";
-        el.style.background = nivel === "municipio" ? "#2563eb" : "#16a34a";
+        el.style.background = estilo.cor;
         el.style.cursor = "pointer";
         el.style.boxShadow = "0 1px 3px rgba(0,0,0,0.4)";
 
         el.addEventListener("click", () => {
-          setPanel({ nivel, id: ponto.id, nome: ponto.nome, votos: ponto.votos });
-          map.current?.flyTo({ center: [ponto.longitude, ponto.latitude], zoom: MAP_MUNICIPIO_ZOOM });
+          setPanel({
+            nivel,
+            id: ponto.id,
+            nome: ponto.nome,
+            votos: ponto.votos,
+            sublabel: ponto.sublabel,
+          });
+          map.current?.flyTo({
+            center: [ponto.longitude, ponto.latitude],
+            zoom: nivel === "secao" ? MAP_SECAO_ZOOM : MAP_MUNICIPIO_ZOOM,
+          });
         });
 
         const marker = new mapboxgl.Marker({ element: el })
@@ -152,19 +219,35 @@ export function InteractiveMap() {
     return () => {
       cancelled = true;
     };
-  }, [nivel, municipioAtual, campanhaId]);
+  }, [nivel, municipioAtual, bairroAtual, campanhaId]);
 
   function handleVoltar() {
     setNivel("municipio");
     setMunicipioAtual(null);
+    setBairroAtual(null);
     setPanel(null);
     map.current?.flyTo({ center: MAP_DEFAULT_CENTER, zoom: MAP_DEFAULT_ZOOM });
+  }
+
+  function handleVoltarAoMunicipio() {
+    if (!municipioAtual) return;
+    setNivel("bairro");
+    setBairroAtual(null);
+    setPanel(null);
   }
 
   function handleVerBairros() {
     if (panel?.nivel !== "municipio") return;
     setMunicipioAtual({ id: panel.id, nome: panel.nome });
+    setBairroAtual(null);
     setNivel("bairro");
+    setPanel(null);
+  }
+
+  function handleVerSecoes() {
+    if (panel?.nivel !== "bairro") return;
+    setBairroAtual({ id: panel.id, nome: panel.nome });
+    setNivel("secao");
     setPanel(null);
   }
 
@@ -177,7 +260,22 @@ export function InteractiveMap() {
         {municipioAtual && (
           <>
             <span className="text-muted-foreground">/</span>
-            <span className="font-medium">{municipioAtual.nome}</span>
+            {bairroAtual ? (
+              <button
+                onClick={handleVoltarAoMunicipio}
+                className="text-muted-foreground hover:underline"
+              >
+                {municipioAtual.nome}
+              </button>
+            ) : (
+              <span className="font-medium">{municipioAtual.nome}</span>
+            )}
+          </>
+        )}
+        {bairroAtual && (
+          <>
+            <span className="text-muted-foreground">/</span>
+            <span className="font-medium">{bairroAtual.nome}</span>
           </>
         )}
       </div>
@@ -203,19 +301,34 @@ export function InteractiveMap() {
           <SheetHeader>
             <SheetTitle>{panel?.nome}</SheetTitle>
             <SheetDescription>
+              {panel?.sublabel && <span className="block">{panel.sublabel}</span>}
               {panel?.votos.toLocaleString("pt-BR")} votos na campanha selecionada
             </SheetDescription>
           </SheetHeader>
           {panel && (
             <div className="flex flex-col gap-4 px-4">
               <MetaEditor nivel={panel.nivel} targetId={panel.id} />
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {panel.nivel === "municipio" && (
                   <Button variant="outline" onClick={handleVerBairros}>
                     Ver bairros
                   </Button>
                 )}
-                <Button variant="outline" render={<Link href={`/${panel.nivel}s/${panel.id}`} />}>
+                {panel.nivel === "bairro" && (
+                  <Button variant="outline" onClick={handleVerSecoes}>
+                    Ver seções
+                  </Button>
+                )}
+                {/* "secao" pluralises to "secoes", so the route is spelled out
+                    rather than derived from the level. */}
+                <Button
+                  variant="outline"
+                  render={
+                    <Link
+                      href={`/${panel.nivel === "secao" ? "secoes" : `${panel.nivel}s`}/${panel.id}`}
+                    />
+                  }
+                >
                   Ver detalhes
                 </Button>
               </div>
