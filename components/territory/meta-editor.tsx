@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useCampaignStore } from "@/stores/campaign-store";
 import type { MetaNivel } from "@/lib/types/territorio";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,60 +14,97 @@ const TARGET_COLUMN: Record<MetaNivel, string> = {
   secao: "secao_id",
 };
 
+type CampanhaMeta = { id: string; nome: string };
+
+/**
+ * Deliberately NOT the toolbar campaign. That selector is a *view* filter, and
+ * using it as the write target meant a goal typed under a card headed "Meta
+ * 2026" was saved against whichever campaign happened to be selected -- so it
+ * vanished, because the dashboard reads goals from the campanha_meta. Same
+ * mistake the import wizard made before it got an explicit destination.
+ *
+ * A goal is always planning for the future election, so it targets the
+ * campaign flagged is_campanha_meta, and says which one on screen.
+ */
 export function MetaEditor({ nivel, targetId }: { nivel: MetaNivel; targetId: string }) {
-  const campanhaId = useCampaignStore((s) => s.selectedCampanhaId);
+  const [campanha, setCampanha] = useState<CampanhaMeta | null>(null);
   const [valor, setValor] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [salvo, setSalvo] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!campanhaId) return;
     let cancelled = false;
 
     async function load() {
-      setLoading(true);
       const supabase = createClient();
+      const { data: meta } = await supabase
+        .from("campanhas")
+        .select("id, nome")
+        .eq("is_campanha_meta", true)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (!meta) {
+        setCampanha(null);
+        setLoading(false);
+        return;
+      }
+
       const { data } = await supabase
         .from("metas")
         .select("valor_meta")
-        .eq("campanha_id", campanhaId)
+        .eq("campanha_id", meta.id)
         .eq("nivel", nivel)
         .eq(TARGET_COLUMN[nivel], targetId)
         .maybeSingle();
-      if (!cancelled) {
-        setValor(data ? String(data.valor_meta) : "");
-        setLoading(false);
-      }
+
+      if (cancelled) return;
+      setCampanha(meta as CampanhaMeta);
+      setValor(data ? String(data.valor_meta) : "");
+      setLoading(false);
     }
 
     load();
     return () => {
       cancelled = true;
     };
-  }, [campanhaId, nivel, targetId]);
+  }, [nivel, targetId]);
 
   async function handleSave() {
-    if (!campanhaId || valor === "") return;
+    if (!campanha || valor === "") return;
     setSaving(true);
+    setErro(null);
     const supabase = createClient();
     const { error } = await supabase.rpc("fn_upsert_meta", {
-      p_campanha_id: campanhaId,
+      p_campanha_id: campanha.id,
       p_nivel: nivel,
       p_target_id: targetId,
       p_valor_meta: Number(valor),
     });
     setSaving(false);
-    if (!error) setSavedAt(Date.now());
+    if (error) {
+      setErro(error.message);
+      return;
+    }
+    setSalvo(true);
   }
 
-  if (!campanhaId) {
-    return <p className="text-sm text-muted-foreground">Selecione uma campanha.</p>;
+  if (!loading && !campanha) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Nenhuma campanha marcada como campanha de metas. Marque uma em Configurações → Campanhas
+        para poder definir metas.
+      </p>
+    );
   }
 
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor="meta-valor">Meta (votos)</Label>
+      <Label htmlFor="meta-valor">
+        Meta (votos){campanha ? ` — ${campanha.nome}` : ""}
+      </Label>
       <div className="flex items-center gap-2">
         <Input
           id="meta-valor"
@@ -76,14 +112,18 @@ export function MetaEditor({ nivel, targetId }: { nivel: MetaNivel; targetId: st
           min={0}
           disabled={loading}
           value={valor}
-          onChange={(e) => setValor(e.target.value)}
+          onChange={(e) => {
+            setValor(e.target.value);
+            setSalvo(false);
+          }}
           className="w-40"
         />
         <Button onClick={handleSave} disabled={loading || saving} variant="outline">
           {saving ? "Salvando..." : "Salvar meta"}
         </Button>
-        {savedAt && <span className="text-xs text-muted-foreground">Salvo</span>}
+        {salvo && <span className="text-xs text-emerald-600">Salvo</span>}
       </div>
+      {erro && <p className="text-sm text-destructive">Não foi possível salvar: {erro}</p>}
     </div>
   );
 }

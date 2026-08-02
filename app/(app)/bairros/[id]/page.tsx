@@ -57,7 +57,7 @@ export default async function BairroDetailPage({
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Meta 2026</CardTitle>
+            <CardTitle>Meta da campanha</CardTitle>
           </CardHeader>
           <CardContent>
             <MetaEditor nivel="bairro" targetId={id} />

@@ -62,7 +62,7 @@ export default async function ZonaDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Meta 2026</CardTitle>
+          <CardTitle>Meta da campanha</CardTitle>
         </CardHeader>
         <CardContent>
           <MetaEditor nivel="zona" targetId={id} />
