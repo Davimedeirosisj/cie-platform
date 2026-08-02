@@ -22,7 +22,16 @@ npm run dev      # Start dev server (http://localhost:3000)
 npm run build    # Production build
 npm run start    # Start production server
 npm run lint     # Run ESLint
+npm test         # Vitest — pure logic only, no DB, no credentials
 ```
+
+**Data integrity is checked in the database, not by these tests.** Run
+`select * from fn_verificar_integridade();` after every import: it re-derives
+the totals across dimensions, looks for orphan/duplicate territory rows, stuck
+batches and coordinates outside the state, and *calls* every RPC — a SQL
+function resolves table names only when invoked, so a dropped column stays
+invisible until someone uses the feature. That has already bitten twice
+(`fn_comparar_campanhas`, then `fn_busca_global` twice over).
 
 ## Architecture
 

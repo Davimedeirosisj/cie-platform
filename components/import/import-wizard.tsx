@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { parseWorkbook, type ParsedSheet } from "@/lib/import/parse-xlsx";
+import { sanitizarNomeArquivo } from "@/lib/import/nome-arquivo";
 import { runImport, saveColumnMapping } from "@/lib/actions/importacao";
 import { SYSTEM_FIELDS, type ColumnMapping, type MappedRow, type SystemField } from "@/lib/types/import";
 import type { Campanha } from "@/lib/types/campanha";
@@ -38,18 +39,6 @@ function buildMappedRows(sheet: ParsedSheet, mapping: ColumnMapping): MappedRow[
 function countInvalidRows(rows: MappedRow[]): number {
   const requiredFields = SYSTEM_FIELDS.filter((f) => f.required).map((f) => f.field);
   return rows.filter((row) => requiredFields.some((f) => !row[f]?.trim())).length;
-}
-
-/**
- * Supabase Storage only accepts a restricted ASCII character set in object
- * keys. Strip accents (CEARÁ -> CEARA) and replace anything else unsafe, so
- * the upload doesn't fail with "Invalid key" on ordinary Brazilian filenames.
- */
-function sanitizarNomeArquivo(nome: string): string {
-  return nome
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // combining accents left by NFD
-    .replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
 /** The finest level the mapping provides -- that's where the votes get stored. */
