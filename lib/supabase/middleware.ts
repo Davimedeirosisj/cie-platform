@@ -2,12 +2,21 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Rotas alcançáveis sem sessão.
+const PUBLIC_ROUTES = [
+  "/login",
+  "/signup",
+  "/esqueci-senha",
+  "/redefinir-senha",
+  "/auth/callback",
+];
+
+// Dessas, só estas devolvem ao /dashboard quem já está logado.
 //
-// /redefinir-senha de propósito NÃO está aqui: o link do email já cria uma
-// sessão de recuperação, então a pessoa chega autenticada. Se fosse pública, a
-// regra "user && isPublicRoute" logo abaixo a mandaria para o /dashboard antes
-// de ela conseguir digitar a senha nova.
-const PUBLIC_ROUTES = ["/login", "/signup", "/esqueci-senha", "/auth/callback"];
+// /redefinir-senha ficou de fora de propósito: dependendo do formato do link, a
+// pessoa chega já autenticada pela sessão de recuperação. Se ela fosse tratada
+// como as outras, seria mandada ao /dashboard antes de conseguir digitar a
+// senha nova -- e quem esqueceu a senha ficaria sem como trocá-la.
+const ROTAS_SO_PARA_DESLOGADOS = ["/login", "/signup", "/esqueci-senha"];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -45,7 +54,11 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && isPublicRoute) {
+  const isRotaSoParaDeslogados = ROTAS_SO_PARA_DESLOGADOS.some((route) =>
+    request.nextUrl.pathname.startsWith(route),
+  );
+
+  if (user && isRotaSoParaDeslogados) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);

@@ -15,7 +15,6 @@ import {
   SignInSchema,
   SignUpSchema,
   PedirResetSchema,
-  RedefinirSenhaSchema,
 } from "@/lib/validation";
 
 export type AuthActionState = { error: string | null };
@@ -156,47 +155,6 @@ export async function pedirResetSenha(
   }
 
   return { error: null, enviado: true };
-}
-
-/**
- * Grava a senha nova. Só funciona dentro da sessão de recuperação criada pelo
- * link do email -- updateUser age sobre o usuário da sessão atual, então não há
- * como trocar a senha de outra pessoa por aqui.
- */
-export async function redefinirSenha(
-  _prevState: AuthActionState,
-  formData: FormData,
-): Promise<AuthActionState> {
-  // See the note in signIn(): redirect() must stay outside the try/catch.
-  try {
-    const validated = validateInput(RedefinirSenhaSchema, parseFormData(formData));
-
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return {
-        error: "Link expirado ou já utilizado. Peça uma nova recuperação de senha.",
-      };
-    }
-
-    const { error } = await supabase.auth.updateUser({ password: validated.password });
-
-    if (error) {
-      console.error("Erro ao redefinir senha:", error.message);
-      return { error: "Não foi possível salvar a senha nova. Tente novamente." };
-    }
-  } catch (error) {
-    if (error instanceof ValidationError) {
-      return { error: error.message };
-    }
-    console.error("Erro em redefinirSenha:", error);
-    return { error: "Erro ao redefinir a senha. Tente novamente." };
-  }
-
-  redirect("/dashboard");
 }
 
 export async function signOut(): Promise<void> {
