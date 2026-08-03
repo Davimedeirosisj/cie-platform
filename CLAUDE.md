@@ -164,6 +164,24 @@ stores/
   `node scripts/geocode-territorios.mjs municipios` (or `bairros <MUNICIPIO>`),
   review the UPDATE it prints, then apply it
 
+### Denominadores do TSE (penetração)
+
+`votos_totais` guarda quantos votos foram dados ao cargo em cada território,
+vindo dos dados abertos do TSE. É o que separa volume de força: Messejana tem
+o maior número de votos *e* 3,85% de penetração, mas Guajeru tem 5,86% e
+aparecia só em 17º no ranking por votos.
+
+Carregue com `node scripts/importar-totais-tse.mjs <arquivo.zip>` (requer
+`SUPABASE_SERVICE_ROLE_KEY`; use `--dry-run` primeiro). O script também confere
+o total da candidata contra o TSE — a conferência de 2022 fechou em 99,77%.
+
+Dois cuidados que já causaram bug:
+- O TSE escreve o cargo no masculino ("Deputado Federal") e as campanhas aqui
+  usam o feminino. O script recebe os dois nomes separadamente.
+- Ano e cargo do denominador saem da **campanha selecionada**, nunca de um
+  valor padrão — senão votos de vereadora acabam divididos pelo total de
+  deputado federal, produzindo um percentual convincente e sem sentido.
+
 ### Dashboard & Analytics
 - KPI calculations in `lib/queries/dashboard.ts`
 - Chart components in `components/dashboard/`
