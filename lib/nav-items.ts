@@ -12,7 +12,6 @@ export const NAV_ITEMS: NavItem[] = [
   { title: "Rankings", href: "/rankings" },
   { title: "Pesquisa Global", href: "/busca" },
   { title: "Mapa Interativo", href: "/mapa" },
-  { title: "Mapa de Calor", href: "/mapa-calor" },
   { title: "Importação", href: "/importacao" },
   { title: "Relatórios", href: "/relatorios" },
   { title: "Configurações", href: "/configuracoes" },

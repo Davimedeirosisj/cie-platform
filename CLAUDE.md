@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Database**: Supabase (PostgreSQL + Auth)
 - **State**: Zustand (client-side) + Server Components
 - **Data Processing**: Excel parsing with XLSX library
-- **Visualization**: ECharts, Mapbox GL for heatmaps
+- **Visualization**: ECharts, Mapbox GL for the territory map
 
 ## Development Commands
 
@@ -83,7 +83,6 @@ app/
 │   ├── secoes/
 │   ├── rankings/        # Vote rankings
 │   ├── mapa/            # Interactive territory map
-│   ├── mapa-calor/      # Heatmap visualization
 │   ├── relatorios/      # Reports (CSV export, print)
 │   ├── importacao/      # Excel data import wizard
 │   ├── configuracoes/   # Campanhas, usuarios, auditoria
@@ -112,7 +111,7 @@ components/
 ├── campanhas/           # Campaign management
 ├── usuarios/            # Role/active-status management, invite dialog
 ├── auditoria/           # Audit log filters
-├── map/                 # Interactive map + heatmap (Mapbox)
+├── map/                 # Interactive territory map (Mapbox)
 ├── import/              # Import wizard
 ├── dashboard/           # Dashboard components (KPI cards, charts)
 └── rankings/            # Ranking table component
@@ -161,7 +160,7 @@ stores/
 - Batch insert via Server Action: `lib/actions/importacao.ts`
 - Note: Rows are sent as JSON to Server Actions (watch 10MB body limit)
 - **Imports create territories without coordinates**, so anything new is
-  invisible on `/mapa` and `/mapa-calor` until geocoded — run
+  invisible on `/mapa` until geocoded — run
   `node scripts/geocode-territorios.mjs municipios` (or `bairros <MUNICIPIO>`),
   review the UPDATE it prints, then apply it
 
@@ -185,7 +184,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 
 **Optional Environment Variables**:
 ```
-NEXT_PUBLIC_MAPBOX_TOKEN=   # enables /mapa and /mapa-calor; both show a setup notice without it
+NEXT_PUBLIC_MAPBOX_TOKEN=   # enables /mapa; it shows a setup notice without it
 SUPABASE_SERVICE_ROLE_KEY=  # server-only; enables inviting new users from Configurações > Usuários
 ```
 
