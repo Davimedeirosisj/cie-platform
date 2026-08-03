@@ -10,6 +10,9 @@ const rateLimitStore = new Map<string, RateLimitEntry>();
 const LIMITS = {
   LOGIN: { attempts: 5, windowMs: 15 * 60 * 1000 }, // 5 tentativas em 15 min
   SIGNUP: { attempts: 3, windowMs: 60 * 60 * 1000 }, // 3 tentativas em 1 hora
+  // Cada pedido dispara um email. Sem limite, o formulário vira ferramenta de
+  // spam contra o endereço de qualquer pessoa da campanha.
+  RESET_SENHA: { attempts: 3, windowMs: 60 * 60 * 1000 }, // 3 pedidos em 1 hora
   IMPORT: { attempts: 10, windowMs: 60 * 60 * 1000 }, // 10 imports em 1 hora
 };
 

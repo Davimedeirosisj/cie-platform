@@ -29,5 +29,22 @@ export const SignUpSchema = z.object({
     .trim(),
 });
 
+export const PedirResetSchema = z.object({
+  email: z.string().email("Email inválido").toLowerCase(),
+});
+
+// Mesmas exigências do cadastro: trocar a senha não pode ser uma porta para
+// enfraquecê-la.
+export const RedefinirSenhaSchema = z.object({
+  password: z
+    .string()
+    .min(8, "Senha deve ter pelo menos 8 caracteres")
+    .max(255, "Senha não pode exceder 255 caracteres")
+    .regex(/[A-Z]/, "Senha deve conter pelo menos uma letra maiúscula")
+    .regex(/[0-9]/, "Senha deve conter pelo menos um número"),
+});
+
 export type SignInInput = z.infer<typeof SignInSchema>;
 export type SignUpInput = z.infer<typeof SignUpSchema>;
+export type PedirResetInput = z.infer<typeof PedirResetSchema>;
+export type RedefinirSenhaInput = z.infer<typeof RedefinirSenhaSchema>;
