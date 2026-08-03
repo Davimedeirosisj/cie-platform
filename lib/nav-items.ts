@@ -10,6 +10,7 @@ export const NAV_ITEMS: NavItem[] = [
   { title: "Zonas", href: "/zonas" },
   { title: "Seções", href: "/secoes" },
   { title: "Rankings", href: "/rankings" },
+  { title: "Metas", href: "/metas" },
   { title: "Pesquisa Global", href: "/busca" },
   { title: "Mapa Interativo", href: "/mapa" },
   { title: "Importação", href: "/importacao" },
