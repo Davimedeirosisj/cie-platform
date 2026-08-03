@@ -47,8 +47,19 @@ export default function RedefinirSenhaPage() {
       setEstado(data.session ? "pronto" : "sem-sessao");
     });
 
+    // getSession() pode nunca resolver: sobrando de uma tentativa anterior um
+    // code-verifier no armazenamento, sem código correspondente na URL, o
+    // cliente fica esperando um fluxo que não vai se completar. Sem este prazo
+    // a tela trava para sempre em "Verificando o link..." -- foi o que
+    // aconteceu em produção. Desistir e oferecer um link novo é sempre melhor
+    // do que uma espera infinita.
+    const prazo = setTimeout(() => {
+      if (!cancelado) setEstado((atual) => (atual === "verificando" ? "sem-sessao" : atual));
+    }, 4000);
+
     return () => {
       cancelado = true;
+      clearTimeout(prazo);
       sub.subscription.unsubscribe();
     };
   }, []);
