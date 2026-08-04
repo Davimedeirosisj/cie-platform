@@ -54,7 +54,7 @@ export async function inviteUser(
 
       revalidatePath("/configuracoes/usuarios");
       return noError;
-    });
+    }, { requiredRole: "super_admin" });
   } catch (error) {
     if (error instanceof ValidationError) {
       return { error: error.message };
@@ -84,7 +84,7 @@ export async function updateUserRole(id: string, role: string): Promise<void> {
     }
 
     revalidatePath("/configuracoes/usuarios");
-  });
+  }, { requiredRole: "super_admin" });
 }
 
 export async function toggleUserActive(id: string, ativo: boolean): Promise<void> {
@@ -102,5 +102,5 @@ export async function toggleUserActive(id: string, ativo: boolean): Promise<void
     }
 
     revalidatePath("/configuracoes/usuarios");
-  });
+  }, { requiredRole: "super_admin" });
 }
